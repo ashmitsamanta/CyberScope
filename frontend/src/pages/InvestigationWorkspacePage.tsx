@@ -19,7 +19,8 @@ import {
   FileCheck,
   ChevronRight,
   RefreshCw,
-  FolderGit2
+  FolderGit2,
+  CheckCircle2
 } from 'lucide-react';
 
 interface Props {
@@ -229,20 +230,42 @@ export const InvestigationWorkspacePage: React.FC<Props> = ({ caseId, onSelectCa
             {activeRightTab === 'SUMMARY' ? (
               <div className="space-y-4">
                 {/* Risk Explanation Summary */}
-                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
                   <div className="text-[10px] font-mono uppercase text-slate-500 mb-1">
                     EXPLAINABLE ASSESSMENT
                   </div>
                   <p className="text-xs text-slate-200 font-sans leading-relaxed">
                     {caseDetail.risk_breakdown?.summary || 'No risk signals recorded.'}
                   </p>
+
+                  {/* Defined Risk Thresholds */}
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <span className="text-[9px] font-mono uppercase text-slate-500 block mb-1.5 font-bold">
+                      SEVERITY THRESHOLDS
+                    </span>
+                    <div className="grid grid-cols-4 gap-1 text-[10px] font-mono text-center">
+                      <div className="p-1 rounded bg-slate-950/80 border border-slate-800 text-slate-400">
+                        <span className="block font-bold">LOW</span> 0–39
+                      </div>
+                      <div className="p-1 rounded bg-slate-950/80 border border-slate-800 text-amber-500/80">
+                        <span className="block font-bold">MEDIUM</span> 40–69
+                      </div>
+                      <div className={`p-1 rounded border ${caseDetail.risk_score >= 70 && caseDetail.risk_score < 90 ? 'bg-orange-950/60 border-orange-500 text-orange-400 font-bold ring-1 ring-orange-500/40' : 'bg-slate-950/80 border-slate-800 text-orange-400/80'}`}>
+                        <span className="block font-bold">HIGH</span> 70–89
+                      </div>
+                      <div className={`p-1 rounded border ${caseDetail.risk_score >= 90 ? 'bg-red-950/60 border-red-500 text-red-400 font-bold ring-1 ring-red-500/40' : 'bg-slate-950/80 border-slate-800 text-red-400/80'}`}>
+                        <span className="block font-bold">CRITICAL</span> 90–100
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Itemized Contributing Signals */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">
-                    ITEMIZED CONTRIBUTING SIGNALS
-                  </span>
+                  <div className="flex items-center justify-between text-[10px] font-mono uppercase text-slate-400 font-bold">
+                    <span>ITEMIZED CONTRIBUTING SIGNALS</span>
+                    <span className="text-cyber-accent">EXACT ARITHMETIC</span>
+                  </div>
                   {caseDetail.risk_breakdown?.signals.map((sig, i) => (
                     <div
                       key={i}
@@ -250,7 +273,7 @@ export const InvestigationWorkspacePage: React.FC<Props> = ({ caseId, onSelectCa
                     >
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="font-bold text-amber-400">{sig.code}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
                           +{sig.points} PTS
                         </span>
                       </div>
@@ -259,6 +282,17 @@ export const InvestigationWorkspacePage: React.FC<Props> = ({ caseId, onSelectCa
                       </p>
                     </div>
                   ))}
+
+                  {/* Verified Arithmetic Total Footer */}
+                  <div className="p-2.5 rounded-lg bg-slate-950 border border-emerald-500/30 flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      TOTAL SIGNAL POINTS:
+                    </span>
+                    <span className="font-bold text-emerald-400">
+                      {caseDetail.risk_breakdown?.signals.reduce((acc, s) => acc + s.points, 0).toFixed(0)} / 100 PTS ({caseDetail.risk_breakdown?.level || 'HIGH'})
+                    </span>
+                  </div>
                 </div>
 
                 {/* Linked Cases in Syndicate */}

@@ -85,6 +85,8 @@ def get_case_timeline(case_id: int, db: Session = Depends(get_db)):
     return {"case_id": case_id, "case_number": case.case_number, "events": events}
 
 
+import html
+
 @router.post("/ingest", response_model=Dict[str, Any])
 def ingest_new_case_report(
     payload: Dict[str, Any],
@@ -98,10 +100,21 @@ def ingest_new_case_report(
     if not content:
         raise HTTPException(status_code=400, detail="Report content cannot be empty")
 
+    # Security: Guard against upload abuse / payload flooding
+    if len(content) > 50000:
+        raise HTTPException(status_code=413, detail="Payload exceeds maximum allowed size of 50KB")
+
+    if len(title) > 256:
+        raise HTTPException(status_code=400, detail="Title length exceeds maximum permitted limit of 256 characters")
+
+    # Security: Defense-in-depth XSS sanitization for reported scam content
+    safe_title = html.escape(str(title).strip())
+    safe_content = html.escape(str(content).strip())
+
     res = IngestionService.ingest_report(
         db=db,
-        title=title,
-        content=content,
+        title=safe_title,
+        content=safe_content,
         channel=channel,
         sender_phone=sender_phone
     )

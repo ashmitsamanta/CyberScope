@@ -25,19 +25,44 @@ logging.basicConfig(
 logger = logging.getLogger("cyberscope")
 
 
+import time
+from app.models.case import Case
+from scripts.seed_demo import seed_database
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing CYBERSCOPE database tables...")
-    Base.metadata.create_all(bind=engine)
+    logger.info("Initializing CYBERSCOPE database connection...")
+    max_retries = 10
+    connected = False
+    for attempt in range(1, max_retries + 1):
+        try:
+            Base.metadata.create_all(bind=engine)
+            connected = True
+            logger.info("CYBERSCOPE database tables initialized.")
+            break
+        except Exception as e:
+            logger.warning(f"Database not ready yet (attempt {attempt}/{max_retries}): {e}. Retrying in 2s...")
+            time.sleep(2)
 
-    # Initial graph synchronization
+    if not connected:
+        logger.error("Failed to initialize database tables after multiple retries.")
+
+    # Check if database is empty and auto-seed demo data if needed
     try:
         db = SessionLocal()
-        graph_service.sync_from_db(db)
+        case_count = db.query(Case).count()
+        if case_count == 0:
+            logger.info("Database contains 0 cases. Auto-seeding 'Operation Phantom KYC' demo data...")
+            seed_database(db_session=db, drop_existing=False)
+            logger.info("Auto-seeding complete.")
+        else:
+            logger.info(f"Database contains {case_count} cases. Synchronizing Fraud Graph...")
+            graph_service.sync_from_db(db)
+            logger.info("Fraud Graph synchronized successfully.")
         db.close()
-        logger.info("Fraud Graph synchronized successfully.")
     except Exception as e:
-        logger.warning(f"Initial graph sync skipped or deferred: {e}")
+        logger.warning(f"Startup database check/seed error: {e}")
 
     yield
     logger.info("CYBERSCOPE backend shutting down.")

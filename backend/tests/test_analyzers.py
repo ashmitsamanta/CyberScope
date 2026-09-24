@@ -89,3 +89,30 @@ def test_transaction_analyzer():
     codes = [s["code"] for s in res["signals"]]
     assert "HIGH_RISK_BENEFICIARY" in codes
     assert "POTENTIAL_STRUCTURING" in codes
+
+
+def test_security_redos_resistance():
+    """Validates that regex extractors are resistant to catastrophic backtracking (ReDoS)."""
+    import time
+    from app.utils.normalization import EntityExtractor
+
+    # 1. Pathological URL pattern with deep dot-chains
+    adversarial_url_text = "Check link: http://" + "sub." * 500 + "bank-portal-verify.com/login and www." + "a" * 5000 + ".evil.com"
+    
+    # 2. Pathological email/UPI pattern
+    adversarial_upi_text = "Contact: " + "a" * 10000 + "@" + "b" * 1000 + ".com and payee@" + "c" * 5000
+
+    # 3. Pathological phone pattern
+    adversarial_phone_text = "Call: +91" + "9" * 10000 + " now!"
+
+    t0 = time.perf_counter()
+    res1 = EntityExtractor.extract_all(adversarial_url_text)
+    res2 = EntityExtractor.extract_all(adversarial_upi_text)
+    res3 = EntityExtractor.extract_all(adversarial_phone_text)
+    duration = time.perf_counter() - t0
+
+    # Must complete in under 150ms even with 20,000+ pathological characters
+    assert duration < 0.15, f"ReDoS vulnerability detected: execution took {duration:.4f}s"
+    assert isinstance(res1, dict)
+    assert isinstance(res2, dict)
+    assert isinstance(res3, dict)

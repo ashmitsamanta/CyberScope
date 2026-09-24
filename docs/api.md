@@ -100,7 +100,7 @@ Body:
   "query": "Why was this case flagged?"
 }
 ```
-Returns evidence-grounded answer, itemized observed evidence, calculated signals, citations (`[CASE-1024]`, `[DOMAIN-1]`, `[TX-9000]`), and recommended next defensive actions.
+Returns evidence-grounded answer, itemized observed evidence, calculated signals, citations (`[CS-1024]`, `[DOMAIN-1]`, `[TX-9000]`), and recommended next defensive actions.
 
 ### `POST /investigations/summary`
 Generates structured executive investigation brief for a case.

@@ -32,8 +32,13 @@ class EntityService:
         ).first()
 
         if existing:
-            # Update last seen and adjust risk score to max if higher
-            existing.last_seen = max(existing.last_seen, now) if existing.last_seen else now
+            # Update last seen safely across naive/aware database timestamps
+            if existing.last_seen:
+                comp_now = now.replace(tzinfo=None) if existing.last_seen.tzinfo is None else (now if now.tzinfo else now.replace(tzinfo=timezone.utc))
+                existing.last_seen = max(existing.last_seen, comp_now)
+            else:
+                existing.last_seen = now
+
             if risk_score > existing.risk_score:
                 existing.risk_score = risk_score
             if metadata:

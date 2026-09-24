@@ -28,8 +28,11 @@ class IngestionService:
         now = datetime.now(timezone.utc)
         
         # 1. Generate unique case number
-        case_count = db.query(Case).count()
-        case_number = f"CS-{1000 + case_count + 1}"
+        existing_cases = {c[0] for c in db.query(Case.case_number).all()}
+        counter = 1000 + len(existing_cases) + 1
+        while f"CS-{counter}" in existing_cases:
+            counter += 1
+        case_number = f"CS-{counter}"
 
         # 2. Extract entities deterministically from raw text
         extracted = EntityExtractor.extract_all(content)
@@ -145,6 +148,7 @@ class IngestionService:
             "case_id": case.id,
             "case_number": case.case_number,
             "title": case.title,
+            "description": case.description,
             "risk_score": case.risk_score,
             "severity": case.severity,
             "extracted_entities": [e.to_dict() for e in created_entities],

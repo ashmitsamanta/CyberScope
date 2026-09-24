@@ -1,14 +1,15 @@
-# CYBERSCOPE — Hackathon Demo Script: "Operation Phantom KYC"
+# CYBERSCOPE — 3-Minute Live Hackathon Demo Script
 
-⏱️ **Target Duration:** ~3 Minutes
+## Target Audience
+Hackathon Judges, Cybersecurity Evaluators, and SOC / Fraud Operations Teams.
 
 ---
 
-## Step 1: Open Intelligence Overview
-1. Start at the main **Overview Dashboard**.
-2. **Key Talking Point for Judges:**
-   > "Welcome to CYBERSCOPE. Traditional fraud detection examines events in isolation, like a single complaint or transaction. CYBERSCOPE treats fraud as an interconnected evidence chain. Notice our platform telemetry: 42 total incidents, 7 high-risk cases, 2 critical syndicates, and 3 active detected campaigns."
-3. Highlight the **Risk Spectrum** and **Coordinated Fraud Campaigns** cards.
+## Step 1: Establish Context & Dashboard (30 Seconds)
+1. Open the browser to **`http://localhost:5173`**.
+2. **Key Talking Point:**
+   > "Welcome to CYBERSCOPE. Fraud does not happen in silos; it moves across coordinated evidence chains. In traditional systems, each alert is handled independently. In CYBERSCOPE, 42 synthetic incoming incident files are immediately analyzed for behavioral anomalies, shared infrastructure, and money movement."
+3. Highlight the top KPIs: **42 Cases**, **7 High Risk**, **2 Critical**, **3 Detected Campaigns**, and the active **Campaign Overview** cards.
 
 ---
 
@@ -18,10 +19,17 @@
 
 ---
 
-## Step 3: Explain the Risk Breakdown
+## Step 3: Explain the Risk Breakdown & Arithmetic
 1. Direct attention to the **Investigation Risk Score** badge: **`84/100 (HIGH)`**.
 2. **Key Talking Point:**
-   > "Notice this score is not a black-box percentage. Looking at the right panel, every single point is explainable: +20 points for a Known Suspicious Identifier, +15 points for Shared Infrastructure, and +15 points for Suspicious Communication Urgency."
+   > "Notice this score is not a black-box percentage. Looking at the right panel, every single point is mathematically accounted for and sums exactly to 84:
+   > - **+20 PTS**: Known Suspicious Identifier (`+919686579303`, Risk: 85/100)
+   > - **+15 PTS**: Shared Campaign Infrastructure (appears across 5 incidents)
+   > - **+15 PTS**: Multi-Case Syndicate Association
+   > - **+15 PTS**: Suspicious Communication Urgency & Impersonation
+   > - **+15 PTS**: Rapid Fund Dispersion (routing to secondary mules within minutes)
+   > - **+4 PTS**: Elevated Exposure Amount (₹48,500)
+   > Total: 84 / 100, placing it squarely in the HIGH severity threshold (70–89), below the CRITICAL threshold (90–100)."
 3. Toggle the **Timeline** tab to show the chronological sequence from the initial SMS to the ₹48,500 transfer.
 
 ---
@@ -44,10 +52,10 @@
 
 ---
 
-## Step 6: Inquire with CYBER-ASSIST (AI Investigator)
+## Step 6: Inquire with CYBER-ASSIST (Grounded AI Investigator)
 1. Turn to the bottom right **CYBER-ASSIST** terminal.
 2. Click the quick prompt: **`Why was this case flagged?`**
-   - The AI returns an evidence-grounded response citing `[CASE-1024]`, `[DOMAIN-1]`, and itemizing observed signals.
+   - The AI returns an evidence-grounded response citing `[CS-1024]`, `[DOMAIN-1]`, and itemizing observed signals.
 3. Click the prompt: **`What entities connect these cases?`**
    - The AI identifies the shared domain and collection UPI handle.
 4. Click: **`What should an investigator examine next?`**
@@ -57,4 +65,4 @@
 
 ## Step 7: Conclusion
 1. **Closing Statement:**
-   > "In less than 3 minutes, CYBERSCOPE transformed an isolated victim SMS into an uncovered multi-case syndicate, fully traced the money movement, and provided structured, non-hallucinatory evidence ready for defensive action."
+   > "In less than 3 minutes, CYBERSCOPE transformed an isolated victim SMS into an uncovered multi-case syndicate, fully traced the money movement, and provided structured, evidence-grounded findings ready for defensive action."

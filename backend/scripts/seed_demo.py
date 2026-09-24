@@ -18,15 +18,31 @@ from scripts.generate_dataset import generate_synthetic_dataset
 from app.services.graph_service import graph_service
 
 
-def seed_database():
+import time
+
+def seed_database(db_session=None, drop_existing=True):
     print("==================================================")
     print("CYBERSCOPE: Initializing Demo Seeding (Operation Phantom KYC)")
     print("==================================================")
 
-    # 1. Recreate tables
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    # 1. Connection retry loop (ensures Docker Postgres container readiness)
+    max_retries = 10
+    connected = False
+    for attempt in range(1, max_retries + 1):
+        try:
+            if drop_existing:
+                Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+            connected = True
+            break
+        except Exception as e:
+            print(f"[WARN] Database connection attempt {attempt}/{max_retries} failed: {e}. Retrying in 2s...")
+            time.sleep(2)
+
+    if not connected:
+        raise RuntimeError("Could not connect to database after multiple retries.")
+
+    db = db_session if db_session is not None else SessionLocal()
 
     # 2. Generate dataset
     data = generate_synthetic_dataset(profile="demo")
@@ -162,7 +178,8 @@ def seed_database():
     ents = db.query(Entity).count()
     txs = db.query(Transaction).count()
 
-    db.close()
+    if db_session is None:
+        db.close()
 
     print("\n[OK] SEEDING COMPLETE! Verification KPIs:")
     print(f" - Total Cases: {total_cases} (Expected: 42)")

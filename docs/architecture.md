@@ -1,7 +1,7 @@
 # CYBERSCOPE — Architecture & Technical Design
 
 ## 1. System Overview
-CYBERSCOPE is an explainable cyber-fraud intelligence and investigation platform engineered for defensive security analysts, fraud investigators, and financial institutions. Its primary goal is not to prove criminal guilt, but to connect fragmented evidence, score risk transparently, trace simulated money movements, detect coordinated campaigns, and assist human investigators via grounded AI.
+CYBERSCOPE is an explainable cyber-fraud intelligence and investigation platform engineered for defensive security analysts, fraud investigators, and incident response teams. Its primary goal is not to prove criminal guilt, but to connect fragmented evidence, score risk transparently, trace simulated money movements, detect coordinated campaigns, and assist human investigators via evidence-grounded AI.
 
 ```
 Synthetic Telemetry
@@ -12,7 +12,7 @@ Entity Extraction & Normalization
        ↓
 Relationship Construction
        ↓
-In-Memory Fraud Graph (NetworkX / Neo4j)
+In-Memory Fraud Graph (NetworkX)
        ↓
 Behavioral & Anomaly Engine
        ↓
@@ -38,8 +38,8 @@ Analyst Console (React + Vite + Tailwind)
 ### 2.2 Relational & Graph Storage
 - **Relational Layer:** SQLAlchemy ORM managing SQLite for local frictionless execution and PostgreSQL for containerized deployments.
 - **Graph Service Interface (`IGraphService`):**
-  - Default: `NetworkXGraphService` builds an in-memory directed graph synchronized with the relational store.
-  - Neo4j Bridge: Pluggable for large distributed graph databases via Cypher queries.
+  - Active Implementation: `NetworkXGraphService` builds an in-memory directed graph synchronized with the relational store for fast, deterministic topology exploration and cycle detection.
+  - Interface Pattern: Designed with an abstract interface (`IGraphService`) should external graph database adapters be integrated in future work.
 - **Algorithms:** $k$-hop neighborhood expansion, shortest path discovery, directed cycle detection (circular fund movements), weakly connected components, and degree centrality anomaly detection.
 
 ### 2.3 Explainable Risk Engine
@@ -47,12 +47,12 @@ Analyst Console (React + Vite + Tailwind)
 - Transparent point breakdown with itemized signal codes:
   - `KNOWN_SUSPICIOUS_IDENTIFIER` (+20 pts)
   - `SHARED_INFRASTRUCTURE` (+15 pts)
-  - `RAPID_TRANSACTION_BURST` (+15 pts)
-  - `RAPID_FUND_DISPERSION` (+15 pts)
   - `MULTI_CASE_ASSOCIATION` (+15 pts)
-  - `UNUSUAL_AMOUNT` (+10 pts)
-  - `SUSPICIOUS_COMMUNICATION_PATTERN` (+10 pts)
-- Severity classifications: LOW (<40), MEDIUM (40-69), HIGH (70-89), CRITICAL (90+).
+  - `SUSPICIOUS_COMMUNICATION_PATTERN` (+15 pts)
+  - `RAPID_FUND_DISPERSION` (+15 pts)
+  - `RAPID_TRANSACTION_BURST` (+15 pts)
+  - `UNUSUAL_AMOUNT` (+4 to +10 pts)
+- Severity classifications: LOW (0–39), MEDIUM (40–69), HIGH (70–89), CRITICAL (90–100).
 
 ### 2.4 Money-Flow Trace Engine
 - BFS graph traversal from starting victim or fraudulent transaction.
@@ -61,6 +61,6 @@ Analyst Console (React + Vite + Tailwind)
 
 ### 2.5 CYBER-ASSIST (Grounded AI Investigator)
 - Implements `AIProvider` abstraction.
-- Default: `DeterministicExpertProvider` produces verifiable, citation-backed analyses (`[CASE-1024]`, `[DOMAIN-1]`, `[TX-9000]`) with zero hallucination risk and zero requirement for external API keys.
+- Default: `DeterministicExpertProvider` produces verifiable, citation-backed analyses (`[CS-1024]`, `[DOMAIN-1]`, `[TX-9000]`) grounded directly in observed database records.
 - Optional: `OpenAIProvider` passes structured context JSON to OpenAI-compatible LLMs under strict grounding system prompts.
 - Explicitly separates: **Observed Evidence**, **Calculated Signals**, **Inferences**, and **Uncertainties**.

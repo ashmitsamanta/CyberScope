@@ -135,17 +135,18 @@ class EntityExtractor:
     (e.g., SMS messages, emails, complaints).
     """
 
-    # Regex definitions
+    # Regex definitions (hardened against ReDoS with non-overlapping linear segment parsing)
     PHONE_REGEX = re.compile(
         r"(?:\+?91[\-\s]?)?[6-9]\d{4}[\-\s]?\d{5}\b|\b(?:\+?1[\-\s]?)?[2-9]\d{2}[\-\s]?\d{3}[\-\s]?\d{4}\b"
     )
-    EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+    EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")
+    # Non-overlapping hostname segments eliminate catastrophic backtracking:
     URL_REGEX = re.compile(
-        r"\b(?:https?://|www\.)[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})+(?:/[^\s]*)?\b",
+        r"\b(?:https?://|www\.)[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}(?:/[^\s]*)?\b",
         re.IGNORECASE
     )
     UPI_REGEX = re.compile(
-        r"\b[a-zA-Z0-9.\-_]{2,256}@(?!gmail|yahoo|outlook|hotmail)[a-zA-Z0-9]{2,64}\b",
+        r"\b[a-zA-Z0-9.\-_]{2,64}@(?!gmail|yahoo|outlook|hotmail)[a-zA-Z0-9]{2,32}\b",
         re.IGNORECASE
     )
     AMOUNT_REGEX = re.compile(
@@ -161,6 +162,9 @@ class EntityExtractor:
                 "upi_ids": [], "amounts": []
             }
 
+        # Guard against unbounded input length abuse
+        bounded_text = str(text)[:50000]
+
         extracted: Dict[str, List[Any]] = {
             "phones": [],
             "emails": [],
@@ -171,7 +175,7 @@ class EntityExtractor:
         }
 
         # 1. URLs & Domains
-        found_urls = cls.URL_REGEX.findall(text)
+        found_urls = cls.URL_REGEX.findall(bounded_text)
         for u in found_urls:
             norm_u = normalize_url(u)
             if norm_u not in extracted["urls"]:

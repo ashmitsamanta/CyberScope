@@ -118,3 +118,43 @@ def test_natural_language_search():
     assert search_resp.status_code == 200
     data = search_resp.json()
     assert "results" in data or "cases" in data
+
+
+def test_security_xss_sanitization():
+    """Validates that adversarial XSS payloads in scam evidence are sanitized before storage."""
+    xss_payload = {
+        "title": "<script>alert('xss-title')</script> Fake Bank Alert",
+        "content": "Urgent: Account locked! <img src=x onerror=alert(document.cookie)> Update at https://secure-login.test",
+        "channel": "SMS"
+    }
+    resp = client.post("/api/cases/ingest", json=xss_payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "case_id" in data
+    
+    # Assert tags are safely escaped in stored description and title
+    assert "<script>" not in data["title"]
+    assert "&lt;script&gt;" in data["title"]
+    assert "<img" not in data["description"]
+    assert "&lt;img" in data["description"]
+
+
+def test_security_upload_abuse_prevention():
+    """Validates that oversized payloads and abusive uploads are rejected."""
+    # Test oversized content (> 50KB)
+    huge_content = "A" * 60000
+    resp_huge = client.post("/api/cases/ingest", json={
+        "title": "Abuse Test",
+        "content": huge_content
+    })
+    assert resp_huge.status_code == 413
+    assert "exceeds maximum allowed size" in resp_huge.json()["detail"]
+
+    # Test oversized title (> 256 chars)
+    huge_title = "T" * 300
+    resp_title = client.post("/api/cases/ingest", json={
+        "title": huge_title,
+        "content": "Normal content"
+    })
+    assert resp_title.status_code == 400
+    assert "exceeds maximum permitted limit" in resp_title.json()["detail"]
