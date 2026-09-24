@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cyberscope-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=CYBERSCOPE
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://cyberscope:cyberscope_secret@postgres:5432/cyberscope_db
+      - GRAPH_BACKEND=networkx
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=cyberscope_neo4j
+      - AI_PROVIDER=fallback
+      - CORS_ORIGINS=["http://localhost:5173","http://localhost:3000","http://localhost"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cyberscope-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cyberscope-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cyberscope
+      POSTGRES_PASSWORD: cyberscope_secret
+      POSTGRES_DB: cyberscope_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberscope -d cyberscope_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5.18-community
+    container_name: cyberscope-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/cyberscope_neo4j
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+    profiles:
+      - with-neo4j
+
+volumes:
+  postgres_data:
+  neo4j_data:
