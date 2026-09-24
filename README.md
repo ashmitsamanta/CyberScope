@@ -73,7 +73,121 @@ Traditional anti-fraud systems evaluate suspicious events in isolation (such as 
 
 ---
 
-## 4. Key Features
+## 4. Complete Project File Structure
+
+```text
+CYBERSCOPE/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── campaigns.py          # Coordinated fraud campaign clustering endpoints
+│   │   │   ├── cases.py              # Case management, filtering, and report ingestion
+│   │   │   ├── entities.py           # 360-degree entity lookup and neighbor exploration
+│   │   │   ├── graph.py              # Interactive fraud graph & circular flow endpoints
+│   │   │   ├── health.py             # Health check & defensive scope disclaimer
+│   │   │   ├── investigations.py     # CYBER-ASSIST AI investigator & summary brief
+│   │   │   ├── search.py             # Safe controlled natural-language search
+│   │   │   ├── stats.py              # Platform KPI aggregations for SOC dashboard
+│   │   │   └── transactions.py       # Ledger exploration and recursive fund tracing
+│   │   ├── analyzers/
+│   │   │   ├── __init__.py           # Package exports for analyzers
+│   │   │   ├── behavioral_analyzer.py # Burst velocity, fan-out/in, dormancy-to-burst
+│   │   │   ├── communication_analyzer.py # Impersonation, urgency, credential harvesting
+│   │   │   ├── graph_analyzer.py     # NetworkX topology, cycles, shortest paths
+│   │   │   └── transaction_analyzer.py # High-value, structuring, and counterparty risk
+│   │   ├── models/
+│   │   │   ├── __init__.py           # Package exports for ORM models
+│   │   │   ├── base.py               # Base class & timestamp mixin
+│   │   │   ├── campaign.py           # Campaign table model
+│   │   │   ├── case.py               # Case incident file model
+│   │   │   ├── entity.py             # Entity table with deduplicated normalized index
+│   │   │   ├── indicator.py          # Threat indicators and flags model
+│   │   │   ├── investigation.py      # Investigation log and evidence trail model
+│   │   │   ├── message.py            # Communication messages & scam lures model
+│   │   │   ├── relationship.py       # Entity-to-entity graph relationship model
+│   │   │   └── transaction.py        # Financial transaction ledger model
+│   │   ├── schemas/
+│   │   │   ├── __init__.py           # Package exports for schemas
+│   │   │   ├── campaign.py           # Campaign API schemas
+│   │   │   ├── case.py               # Case detail, list, update & risk signal schemas
+│   │   │   ├── entity.py             # Entity detail & neighbor response schemas
+│   │   │   ├── graph.py              # GraphNode, GraphEdge & filter schemas
+│   │   │   ├── investigation.py      # AI query, citations & timeline event schemas
+│   │   │   └── transaction.py        # Transaction & money-flow trace schemas
+│   │   ├── services/
+│   │   │   ├── ai_service.py         # AIProvider abstraction (Deterministic + OpenAI)
+│   │   │   ├── campaign_service.py   # Multi-incident syndicate clustering service
+│   │   │   ├── entity_service.py     # Deduplication, resolution, and relational indexing
+│   │   │   ├── graph_service.py      # In-memory NetworkX with Neo4j bridge interface
+│   │   │   ├── ingestion_service.py  # Regex extraction & automatic graph link creation
+│   │   │   ├── risk_service.py       # Transparent explainable scoring engine (Max 100)
+│   │   │   ├── timeline_service.py   # Chronological evidence sequencing service
+│   │   │   └── transaction_service.py# Recursive BFS money-flow trace engine
+│   │   ├── utils/
+│   │   │   └── normalization.py      # E.164 phone, domain, URL, and UPI normalizers
+│   │   ├── config.py                 # Pydantic BaseSettings with environment overrides
+│   │   ├── database.py               # Session lifecycle (SQLite default / PostgreSQL)
+│   │   └── main.py                   # FastAPI lifespan, CORS, and centralized routing
+│   ├── scripts/
+│   │   ├── generate_dataset.py       # Deterministic generator (Seed 42, 9 patterns)
+│   │   ├── seed_demo.py              # Populates database with "Operation Phantom KYC"
+│   │   ├── reset_demo.py             # One-command demo reset utility
+│   │   └── evaluate_patterns.py      # Benchmark evaluation (Precision, Recall, F1)
+│   ├── tests/
+│   │   ├── test_analyzers.py         # Unit tests for heuristics & normalization
+│   │   └── test_api.py               # REST API integration tests (17/17 passing)
+│   ├── Dockerfile                    # Python 3.11 container build definition
+│   └── requirements.txt              # Backend dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── CyberAssistChat.tsx   # Grounded AI assistant with prompt pills & citations
+│   │   │   ├── GraphViewer.tsx       # Interactive SVG/Canvas graph (zoom, pan, drag)
+│   │   │   ├── MoneyFlowViewer.tsx   # Visual multi-hop fund movement diagram
+│   │   │   ├── Navbar.tsx            # Console navigation, status badges & search trigger
+│   │   │   ├── RiskScoreBadge.tsx    # Color-coded risk meter (LOW/MED/HIGH/CRITICAL)
+│   │   │   ├── SearchModal.tsx       # Natural language controlled query interface
+│   │   │   └── TimelineView.tsx      # Chronological incident stream
+│   │   ├── pages/
+│   │   │   ├── DashboardPage.tsx     # Overview: KPIs, risk spectrum, campaigns, queue
+│   │   │   ├── CasesPage.tsx         # Filterable case registry with search
+│   │   │   ├── GraphPage.tsx         # Full-network graph explorer & cycle detector
+│   │   │   ├── EntityExplorerPage.tsx# 360-degree entity dossier & neighbor hops
+│   │   │   ├── TransactionsPage.tsx  # Tabular ledger & modal fund tracing
+│   │   │   ├── CampaignsPage.tsx     # Syndicate clusters & shared fingerprints
+│   │   │   └── InvestigationWorkspacePage.tsx # Flagship 4-quadrant demo workspace
+│   │   ├── services/
+│   │   │   └── api.ts                # Typed fetch API client
+│   │   ├── types/
+│   │   │   └── index.ts              # TypeScript interfaces matching backend models
+│   │   ├── App.tsx                   # Top-level state and routing
+│   │   ├── index.css                 # Dark SOC theme styling & custom scrollbars
+│   │   └── main.tsx                  # React 18 DOM root
+│   ├── Dockerfile                    # Multi-stage Node builder & Nginx runner
+│   ├── nginx.conf                    # Nginx reverse proxy configuration
+│   ├── package.json                  # Frontend dependencies and build scripts
+│   ├── postcss.config.js             # PostCSS Tailwind plugins
+│   ├── tailwind.config.js            # SOC dark color tokens & fonts
+│   ├── tsconfig.json                 # TypeScript compiler options
+│   └── vite.config.ts                # Vite config with API proxy
+├── data/
+│   └── synthetic/
+│       └── benchmark_dataset.json    # Exported benchmark dataset
+├── docs/
+│   ├── api.md                        # Full REST API specification
+│   ├── architecture.md               # Technical subsystem design
+│   ├── demo-script.md                # 3-minute hackathon walkthrough script
+│   └── detection-methodology.md      # Mathematical & heuristic fraud formulas
+├── .env.example                      # Environment variables template
+├── .gitignore                        # Git exclusion rules
+├── docker-compose.yml                # Multi-container orchestration (Postgres, Neo4j, App)
+├── Makefile                          # Unified build and automation commands
+└── README.md                         # Platform documentation and guide
+```
+
+---
+
+## 5. Key Features
 
 - **Explainable Risk Scoring:** Replaces opaque black-box probabilities with itemized signal cards (e.g. `KNOWN_SUSPICIOUS_IDENTIFIER` +20, `SHARED_INFRASTRUCTURE` +15, `RAPID_TRANSACTION_BURST` +15).
 - **Interactive Multi-Hop Fraud Graph:** Pan, zoom, node drag, 1/2/3-hop expansion, entity filtering, and real-time topology inspection.
@@ -84,7 +198,7 @@ Traditional anti-fraud systems evaluate suspicious events in isolation (such as 
 
 ---
 
-## 5. Technology Stack
+## 6. Technology Stack
 
 ### Backend
 - **Framework:** FastAPI (Python 3.11+)
@@ -102,7 +216,7 @@ Traditional anti-fraud systems evaluate suspicious events in isolation (such as 
 
 ---
 
-## 6. Getting Started & Local Setup
+## 7. Getting Started & Local Setup
 
 ### Prerequisites
 - Python 3.10+ (tested on Python 3.13)
@@ -172,7 +286,7 @@ docker compose up --build
 
 ---
 
-## 7. Demo Scenario: "Operation Phantom KYC"
+## 8. Demo Scenario: "Operation Phantom KYC"
 
 CYBERSCOPE includes a pre-seeded, deterministic investigative scenario called **"Operation Phantom KYC"**:
 - **5 Victims** receiving urgent bank account deactivation / KYC suspension SMS lures.
@@ -205,7 +319,7 @@ CYBERSCOPE includes a pre-seeded, deterministic investigative scenario called **
 
 ---
 
-## 8. Evaluation & Benchmark Results
+## 9. Evaluation & Benchmark Results
 
 Because the synthetic dataset contains known planted fraud patterns, an evaluation script tests detection precision, recall, and accuracy:
 
@@ -228,7 +342,7 @@ python backend/scripts/evaluate_patterns.py
 
 ---
 
-## 9. Running Tests
+## 10. Running Tests
 
 ```powershell
 cd backend
@@ -239,7 +353,7 @@ pytest tests/ -v
 
 ---
 
-## 10. Known Limitations
+## 11. Known Limitations
 
 - **Synthetic Scope:** All phone numbers, bank accounts, and people are fictional simulations; real-world data contains OCR artifacts and carrier noise.
 - **Offline Cash Conversions:** Money-flow tracing stops at physical OTC cash withdrawals or ATM endpoints not recorded in ledger telemetry.
@@ -247,7 +361,7 @@ pytest tests/ -v
 
 ---
 
-## 11. Team & Hackathon Submission
+## 12. Team & Hackathon Submission
 
 Built for the Hackathon by a senior engineering and security architecture team.
 - **Platform:** CYBERSCOPE
