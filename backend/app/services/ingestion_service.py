@@ -145,6 +145,7 @@ class IngestionService:
         graph_service.sync_from_db(db, force=True)
 
         return {
+            "id": case.id,
             "case_id": case.id,
             "case_number": case.case_number,
             "title": case.title,

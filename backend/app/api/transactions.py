@@ -45,13 +45,18 @@ def list_transactions(
         )
 
         tx_dict = tx.to_dict()
+        is_susp = bool(eval_res["signals"]) or tx.status == "FLAGGED"
         tx_dict.update({
             "sender_value": snd.value if snd else None,
             "receiver_value": rcv.value if rcv else None,
             "sender_type": snd.entity_type if snd else None,
             "receiver_type": rcv.entity_type if rcv else None,
             "case_number": c.case_number if c else None,
-            "risk_signals": eval_res["signals"]
+            "risk_signals": eval_res["signals"],
+            "tx_hash": tx.transaction_ref,
+            "from_account": snd.value if snd else f"ENT-{tx.sender_entity_id}",
+            "to_account": rcv.value if rcv else f"ENT-{tx.receiver_entity_id}",
+            "is_suspicious": is_susp
         })
         results.append(tx_dict)
 
@@ -75,13 +80,18 @@ def get_transaction(tx_id: int, db: Session = Depends(get_db)):
     )
 
     tx_dict = tx.to_dict()
+    is_susp = bool(eval_res["signals"]) or tx.status == "FLAGGED"
     tx_dict.update({
         "sender_value": snd.value if snd else None,
         "receiver_value": rcv.value if rcv else None,
         "sender_type": snd.entity_type if snd else None,
         "receiver_type": rcv.entity_type if rcv else None,
         "case_number": c.case_number if c else None,
-        "risk_signals": eval_res["signals"]
+        "risk_signals": eval_res["signals"],
+        "tx_hash": tx.transaction_ref,
+        "from_account": snd.value if snd else f"ENT-{tx.sender_entity_id}",
+        "to_account": rcv.value if rcv else f"ENT-{tx.receiver_entity_id}",
+        "is_suspicious": is_susp
     })
     return tx_dict
 

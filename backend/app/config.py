@@ -1,10 +1,23 @@
 import os
 from typing import List
-from pydantic_settings import BaseSettings
+
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:  # pragma: no cover
+    from pydantic import BaseSettings  # type: ignore
+    SettingsConfigDict = None  # type: ignore
+
 from pydantic import Field
 
 
 class Settings(BaseSettings):
+    if SettingsConfigDict is not None:
+        model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="allow")
+    else:
+        class Config:
+            env_file = ".env"
+            env_file_encoding = "utf-8"
+            extra = "allow"
     APP_NAME: str = "CYBERSCOPE"
     APP_ENV: str = "development"
     DEBUG: bool = True
@@ -26,11 +39,13 @@ class Settings(BaseSettings):
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "cyberscope_neo4j"
 
-    # AI Provider: fallback (deterministic explainable expert engine) or openai
+    # AI Provider: fallback (deterministic explainable expert engine) or openai or nvidia
     AI_PROVIDER: str = "fallback"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     OPENAI_API_BASE: str = "https://api.openai.com/v1"
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
 
     # Detection & Analysis Thresholds
     BURST_WINDOW_MINUTES: int = 15
@@ -40,11 +55,6 @@ class Settings(BaseSettings):
     CIRCULAR_FLOW_MAX_HOPS: int = 5
     DORMANCY_DAYS_THRESHOLD: int = 30
     UNUSUAL_AMOUNT_RATIO: float = 3.0
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "allow"
 
 
 settings = Settings()

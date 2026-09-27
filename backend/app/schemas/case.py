@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -40,9 +40,8 @@ class CaseResponse(CaseBase):
     id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    entity_count: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CaseDetailResponse(CaseResponse):
@@ -52,3 +51,4 @@ class CaseDetailResponse(CaseResponse):
     message_count: int = 0
     indicator_count: int = 0
     campaign_name: Optional[str] = None
+    connected_paths: Optional[int] = None

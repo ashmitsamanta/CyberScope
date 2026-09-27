@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CyberScope | Campaign Explorer</title>
+<link rel="stylesheet" href="assets/cyberscope.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="CyberScope.html"><div class="mark">CS</div><div><b>CYBERSCOPE</b><small>A PROJECT OF TETRABYTE</small></div></a>
+  <div class="nav-inline">
+    <nav class="nav" id="siteNav">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="cases.html">Cases</a>
+      <a href="fraud-graph.html">Fraud Graph</a>
+      <a href="entity-explorer.html">Entities</a>
+      <a href="transaction-explorer.html">Transactions</a>
+      <a href="campaign-explorer.html">Campaigns</a>
+      <a href="investigation-workspace.html">Workspace</a>
+    </nav>
+    <div class="profile">
+      <div class="avatar" id="avatar">CS</div>
+      <div><div class="pname" id="profileName">User</div><div class="prole">Investigator</div></div>
+      <button class="signout" onclick="signOut()">Sign out</button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="siteNav"><span></span><span></span><span></span></button>
+  </div>
+</header>
+<div class="nav-backdrop" id="navBackdrop"></div>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">CYBERSCOPE MODULE</div>
+      <h1>Group incidents into possible campaigns.</h1>
+      <p>Correlate cases through shared infrastructure, repeated entities and recurring fraud signals.</p>
+    </div>
+    <div class="status"><span class="dot-pulse">●</span> SYSTEM OPERATIONAL</div>
+  </section>
+
+  <div class="grid3">
+    <div class="card panel">
+      <div class="eyebrow">CAMPAIGN 01</div>
+      <h2>Utility-Bill Cluster</h2>
+      <div class="sub">12 linked cases</div>
+      <div class="metric"><label>SHARED ENTITIES</label><strong>19</strong><small>5 domains · 8 phones</small></div>
+      <span class="tag high">HIGH CORRELATION</span>
+    </div>
+    <div class="card panel">
+      <div class="eyebrow">CAMPAIGN 02</div>
+      <h2>KYC Phishing Network</h2>
+      <div class="sub">8 linked cases</div>
+      <div class="metric"><label>SHARED ENTITIES</label><strong>14</strong><small>4 domains · 6 phones</small></div>
+      <span class="tag high">HIGH CORRELATION</span>
+    </div>
+    <div class="card panel">
+      <div class="eyebrow">CAMPAIGN 03</div>
+      <h2>Impersonation Cluster</h2>
+      <div class="sub">7 linked cases</div>
+      <div class="metric"><label>SHARED ENTITIES</label><strong>10</strong><small>3 phones · 2 UPI IDs</small></div>
+      <span class="tag medium">REVIEW</span>
+    </div>
+  </div>
+
+  <section class="card panel" style="margin-top:17px">
+    <h2>Campaign Signals</h2>
+    <div class="sub">Explainable indicators used to group incidents</div>
+    <div class="grid3">
+      <div class="item"><b>Shared infrastructure</b><p>Same domains, phone numbers or payment destinations across cases.</p></div>
+      <div class="item"><b>Repeated patterns</b><p>Similar scam wording or recurring incident characteristics.</p></div>
+      <div class="item"><b>Entity overlap</b><p>Multiple incidents converge on the same investigation objects.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>CYBERSCOPE · TETRABYTE · INVESTIGATION INTELLIGENCE CONSOLE</footer>
+
+<button class="chat-button" id="chatButton" aria-label="Open CyberScope assistant">✦</button>
+<div class="chat-window" id="chatWindow">
+  <div class="chat-head">
+    <div class="chat-head-title"><div class="chat-logo">CS</div><div><strong>CYBERSCOPE ASSISTANT</strong><small>Investigation workspace assistant</small></div></div>
+    <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-message bot-message">Hello. I can explain cases, the fraud graph, entities, transactions, campaigns and the investigation workspace.</div>
+  </div>
+  <div class="chat-quick">
+    <button data-q="What is the Fraud Graph?">Fraud Graph</button>
+    <button data-q="What is a case?">Cases</button>
+    <button data-q="What are entities?">Entities</button>
+    <button data-q="Tell me about transactions">Transactions</button>
+    <button data-q="What is Campaign Explorer?">Campaigns</button>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask CyberScope...">
+    <button class="chat-send" id="chatSend">→</button>
+  </div>
+</div>
+
+<script src="assets/cyberscope.js"></script>
+<script>cyberscopeProtect();</script>
+</body>
+</html>

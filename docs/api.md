@@ -111,3 +111,30 @@ Generates structured executive investigation brief for a case.
 
 ### `GET /search?q={query}`
 Controlled intent parser translating search prompts into safe parameterized queries.
+
+---
+
+## 8. CyberScope AI & NVIDIA NIM API Proxy
+
+### `POST /chat`
+Proxies chat completions requests to NVIDIA NIM (`meta/llama-3.2-11b-vision-instruct`) with zero browser CORS restrictions, falling back to local CyberScope intelligence if upstream is unreachable.
+
+Headers:
+- `Authorization: Bearer <NVIDIA_API_KEY>` (optional, defaults to configured key)
+- `Content-Type: application/json`
+
+Body:
+```json
+{
+  "model": "meta/llama-3.2-11b-vision-instruct",
+  "messages": [
+    { "role": "user", "content": "Explain the indicators of compromise in KYC phishing." }
+  ],
+  "temperature": 0.3,
+  "max_tokens": 450
+}
+```
+
+Response:
+Standard OpenAI / NVIDIA NIM chat completion format (`choices[0].message.content`).
+

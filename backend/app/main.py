@@ -15,6 +15,7 @@ from app.api.campaigns import router as campaigns_router
 from app.api.investigations import router as investigations_router
 from app.api.search import router as search_router
 from app.api.stats import router as stats_router
+from app.api.chat import router as chat_router
 from app.services.graph_service import graph_service
 
 # Logging setup
@@ -78,8 +79,8 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -108,6 +109,8 @@ app.include_router(transactions_router, prefix="/api")
 app.include_router(campaigns_router, prefix="/api")
 app.include_router(investigations_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+app.include_router(chat_router)
 
 
 @app.get("/")

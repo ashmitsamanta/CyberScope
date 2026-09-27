@@ -32,5 +32,8 @@ class Campaign(Base):
             "first_seen": self.first_seen.isoformat() if self.first_seen else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
             "shared_indicators": self.shared_indicators or {},
+            "code": self.campaign_id,
+            "shared_entity_count": self.entity_count,
+            "severity": "CRITICAL" if self.risk_score >= 80 else ("HIGH" if self.risk_score >= 60 else "MEDIUM"),
             "metadata": self.meta_data or {},
         }

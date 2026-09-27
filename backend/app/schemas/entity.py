@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -20,9 +20,9 @@ class EntityResponse(EntityBase):
     id: int
     first_seen: Optional[datetime] = None
     last_seen: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    case_count: Optional[int] = None
+    degree: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EntityNeighbor(BaseModel):

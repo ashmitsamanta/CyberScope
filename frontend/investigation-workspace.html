@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CyberScope | Investigation Workspace</title>
+<link rel="stylesheet" href="assets/cyberscope.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="CyberScope.html"><div class="mark">CS</div><div><b>CYBERSCOPE</b><small>A PROJECT OF TETRABYTE</small></div></a>
+  <div class="nav-inline">
+    <nav class="nav" id="siteNav">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="cases.html">Cases</a>
+      <a href="fraud-graph.html">Fraud Graph</a>
+      <a href="entity-explorer.html">Entities</a>
+      <a href="transaction-explorer.html">Transactions</a>
+      <a href="campaign-explorer.html">Campaigns</a>
+      <a href="investigation-workspace.html">Workspace</a>
+    </nav>
+    <div class="profile">
+      <div class="avatar" id="avatar">CS</div>
+      <div><div class="pname" id="profileName">User</div><div class="prole">Investigator</div></div>
+      <button class="signout" onclick="signOut()">Sign out</button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="siteNav"><span></span><span></span><span></span></button>
+  </div>
+</header>
+<div class="nav-backdrop" id="navBackdrop"></div>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">CYBERSCOPE MODULE</div>
+      <h1>Bring the evidence into one place.</h1>
+      <p>Combine case context, graph findings, notes and report actions into a structured investigation workspace.</p>
+    </div>
+    <div class="status"><span class="dot-pulse">●</span> SYSTEM OPERATIONAL</div>
+  </section>
+
+  <div class="grid">
+    <section>
+      <div class="card panel">
+        <h2>Current Investigation</h2>
+        <div class="sub" id="wsCaseTitle">CS-1027 · KYC phishing cluster</div>
+        <div class="grid3">
+          <div class="card metric"><label>RISK</label><strong id="wsRiskScore">82</strong><small>high signal</small></div>
+          <div class="card metric"><label>ENTITIES</label><strong id="wsEntityCount">14</strong><small>linked</small></div>
+          <div class="card metric"><label>PATHS</label><strong id="wsPathCount">6</strong><small>connected routes</small></div>
+        </div>
+      </div>
+      <div class="card panel" style="margin-top:17px">
+        <h2>Investigator Notes</h2>
+        <div class="sub">Local demo notes · connect to backend persistence later</div>
+        <textarea class="notes" id="notes" placeholder="Record observations, evidence references and next actions..."></textarea>
+        <div style="margin-top:10px">
+          <button class="btn" onclick="saveNotes()">Save Notes</button>
+          <span id="saved" style="font-size:10px;color:var(--green);margin-left:10px">Saved locally</span>
+        </div>
+      </div>
+    </section>
+    <aside class="card panel">
+      <h2>Investigation Actions</h2>
+      <div class="sub">Structured workflow</div>
+      <div class="list">
+        <div class="item"><b>1 · Review report</b><p>Read the submitted incident and classification signal.</p></div>
+        <div class="item"><b>2 · Expand graph</b><p>Trace connected entities and shortest paths.</p></div>
+        <div class="item"><b>3 · Check transactions</b><p>Inspect linked financial movement.</p></div>
+        <div class="item"><b>4 · Correlate campaign</b><p>Compare related incidents and infrastructure.</p></div>
+        <div class="item"><b>5 · Export report</b><p>Frontend button placeholder for /report/{id}/export.</p></div>
+      </div>
+      <button class="btn" style="width:100%;margin-top:12px" onclick="alert('Report export will connect to the backend endpoint later.')">Export Investigation Report</button>
+    </aside>
+  </div>
+</main>
+
+<footer>CYBERSCOPE · TETRABYTE · INVESTIGATION INTELLIGENCE CONSOLE</footer>
+
+<button class="chat-button" id="chatButton" aria-label="Open CyberScope assistant">✦</button>
+<div class="chat-window" id="chatWindow">
+  <div class="chat-head">
+    <div class="chat-head-title"><div class="chat-logo">CS</div><div><strong>CYBERSCOPE ASSISTANT</strong><small>Investigation workspace assistant</small></div></div>
+    <button class="chat-close" id="chatClose" aria-label="Close chat">×</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-message bot-message">Hello. I can explain cases, the fraud graph, entities, transactions, campaigns and the investigation workspace.</div>
+  </div>
+  <div class="chat-quick">
+    <button data-q="What is the Fraud Graph?">Fraud Graph</button>
+    <button data-q="What is a case?">Cases</button>
+    <button data-q="What are entities?">Entities</button>
+    <button data-q="Tell me about transactions">Transactions</button>
+    <button data-q="What is Campaign Explorer?">Campaigns</button>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask CyberScope...">
+    <button class="chat-send" id="chatSend">→</button>
+  </div>
+</div>
+
+<script src="assets/cyberscope.js"></script>
+<script>
+cyberscopeProtect();
+document.getElementById('notes').value = localStorage.getItem('cyberscopeNotes') || '';
+var savedTimer;
+function saveNotes(){
+  localStorage.setItem('cyberscopeNotes', document.getElementById('notes').value);
+  var saved = document.getElementById('saved');
+  saved.classList.add('show');
+  clearTimeout(savedTimer);
+  savedTimer = setTimeout(function(){ saved.classList.remove('show'); }, 1800);
+}
+
+async function loadCaseDetail(){
+  var params = new URLSearchParams(window.location.search);
+  var caseId = params.get('case_id');
+  if(!caseId) return;
+  try {
+    var res = await fetch('/api/cases/' + encodeURIComponent(caseId));
+    if(res.ok){
+      var d = await res.json();
+      if(d.case_number || d.title) document.getElementById('wsCaseTitle').textContent = (d.case_number || ('CS-' + caseId)) + ' · ' + (d.title || 'Fraud Investigation');
+      if(d.risk_score !== undefined) document.getElementById('wsRiskScore').textContent = Math.round(d.risk_score);
+      if(d.entity_count !== undefined) document.getElementById('wsEntityCount').textContent = d.entity_count;
+      if(d.connected_paths !== undefined) document.getElementById('wsPathCount').textContent = Array.isArray(d.connected_paths) ? d.connected_paths.length : d.connected_paths;
+    }
+  } catch(e) {}
+}
+loadCaseDetail();
+</script>
+</body>
+</html>
+

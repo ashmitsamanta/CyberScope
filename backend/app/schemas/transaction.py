@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -30,9 +30,11 @@ class TransactionResponse(TransactionBase):
     receiver_type: Optional[str] = None
     case_number: Optional[str] = None
     risk_signals: List[Dict[str, Any]] = Field(default_factory=list)
-
-    class Config:
-        from_attributes = True
+    tx_hash: Optional[str] = None
+    from_account: Optional[str] = None
+    to_account: Optional[str] = None
+    is_suspicious: Optional[bool] = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MoneyFlowTraceRequest(BaseModel):

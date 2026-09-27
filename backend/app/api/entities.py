@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 
 from app.database import get_db
 from app.models.entity import Entity
+from app.models.relationship import Relationship
 from app.models.transaction import Transaction
 from app.models.indicator import Indicator
 from app.schemas.entity import EntityResponse, EntityDetailResponse
@@ -31,7 +32,16 @@ def list_entities(
         query = query.filter(Entity.normalized_value.ilike(s_pat))
 
     entities = query.order_by(Entity.risk_score.desc(), Entity.last_seen.desc()).offset(offset).limit(limit).all()
-    return [e.to_dict() for e in entities]
+    results = []
+    for e in entities:
+        d = e.to_dict()
+        rel_count = db.query(Relationship).filter(
+            (Relationship.source_entity_id == e.id) | (Relationship.target_entity_id == e.id)
+        ).count()
+        d["degree"] = rel_count
+        d["case_count"] = max(1, rel_count // 2) if e.entity_type != "CASE" else 1
+        results.append(d)
+    return results
 
 
 @router.get("/{entity_id}", response_model=EntityDetailResponse)

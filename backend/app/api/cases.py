@@ -40,7 +40,15 @@ def list_cases(
         query = query.filter((Case.case_number.ilike(s_pat)) | (Case.title.ilike(s_pat)))
 
     cases = query.order_by(Case.risk_score.desc(), Case.created_at.desc()).offset(offset).limit(limit).all()
-    return [c.to_dict() for c in cases]
+    results = []
+    for c in cases:
+        c_dict = c.to_dict()
+        # Find count of linked entities via transactions or indicators
+        t_cnt = db.query(Transaction).filter(Transaction.case_id == c.id).count()
+        i_cnt = db.query(Indicator).filter(Indicator.case_id == c.id).count()
+        c_dict["entity_count"] = max(1, t_cnt * 2 + i_cnt)
+        results.append(c_dict)
+    return results
 
 
 @router.get("/{case_id}", response_model=CaseDetailResponse)
@@ -56,6 +64,7 @@ def get_case(case_id: int, db: Session = Depends(get_db)):
     tx_count = db.query(Transaction).filter(Transaction.case_id == case_id).count()
     msg_count = db.query(Message).filter(Message.case_id == case_id).count()
     ind_count = db.query(Indicator).filter(Indicator.case_id == case_id).count()
+    calculated_entities = max(1, tx_count * 2 + ind_count)
 
     camp_name = None
     if case.campaign_id:
@@ -66,10 +75,12 @@ def get_case(case_id: int, db: Session = Depends(get_db)):
     case_dict = case.to_dict()
     case_dict.update({
         "risk_breakdown": risk_breakdown,
+        "entity_count": calculated_entities,
         "transaction_count": tx_count,
         "message_count": msg_count,
         "indicator_count": ind_count,
         "campaign_name": camp_name,
+        "connected_paths": max(2, tx_count + ind_count)
     })
 
     return case_dict

@@ -24,7 +24,7 @@ Case Chronological Timeline
        ↓
 Explainable Grounded AI (CYBER-ASSIST)
        ↓
-Analyst Console (React + Vite + Tailwind)
+CyberScope Investigation Suite (Cyber-Neon MPA + Vite)
 ```
 
 ---
@@ -64,3 +64,21 @@ Analyst Console (React + Vite + Tailwind)
 - Default: `DeterministicExpertProvider` produces verifiable, citation-backed analyses (`[CS-1024]`, `[DOMAIN-1]`, `[TX-9000]`) grounded directly in observed database records.
 - Optional: `OpenAIProvider` passes structured context JSON to OpenAI-compatible LLMs under strict grounding system prompts.
 - Explicitly separates: **Observed Evidence**, **Calculated Signals**, **Inferences**, and **Uncertainties**.
+
+### 2.6 CyberScope Cyber-Neon Multi-Page Suite
+- Modern glassmorphism dark aesthetic with custom typography (`Inter`, `Space Grotesk`) and micro-animations.
+- Multi-page application structure powered by Vite with Rollup multi-page inputs:
+  - `CyberScope.html` / `index.html`: Showcase landing, live AI engine, interactive modules.
+  - `dashboard.html`: Live telemetry and recent investigations.
+  - `cases.html`: Incident registry and ingestion modal.
+  - `fraud-graph.html`: Node-and-link topological network exploration.
+  - `entity-explorer.html`: 360-degree identifier dossiers.
+  - `transaction-explorer.html`: Financial ledger and flow metrics.
+  - `campaign-explorer.html`: Syndicate correlation clusters.
+  - `investigation-workspace.html`: Case evidence, timeline, notes, and report export.
+  - `signin.html` & `register.html`: Identity authentication with pre-seeded demo fallback.
+
+### 2.7 NVIDIA NIM API Proxy Architecture
+- Resolves browser CORS restrictions by proxying `/api/chat` through the FastAPI backend to NVIDIA NIM (`meta/llama-3.2-11b-vision-instruct`).
+- Handles upstream connection errors with automatic fallback to built-in deterministic cyber-intelligence responses.
+
