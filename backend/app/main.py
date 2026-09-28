@@ -16,6 +16,7 @@ from app.api.investigations import router as investigations_router
 from app.api.search import router as search_router
 from app.api.stats import router as stats_router
 from app.api.chat import router as chat_router
+from app.api.auth import router as auth_router
 from app.services.graph_service import graph_service
 
 # Logging setup
@@ -111,6 +112,7 @@ app.include_router(investigations_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_router)
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/")

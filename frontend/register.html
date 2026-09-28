@@ -6,48 +6,115 @@
 <style>
 :root{--bg:#050a12;--panel:#0a1220;--panel2:#0d1727;--text:#eaf4ff;--muted:#8da1b8;--cyan:#36cfff;--green:#5dffb1;--danger:#ff6b7a}
 *{box-sizing:border-box}html{scroll-behavior:smooth}:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}}body{margin:0;min-height:100vh;font-family:Inter,Arial,sans-serif;color:var(--text);background:var(--bg);display:grid;place-items:center;padding:95px 18px 35px}body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(54,207,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(54,207,255,.035) 1px,transparent 1px);background-size:42px 42px}.topbar{position:fixed;top:0;left:0;right:0;height:74px;padding:0 6%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(54,207,255,.1);background:rgba(5,10,18,.88);backdrop-filter:blur(14px);z-index:5}.brand{display:flex;gap:11px;align-items:center;color:var(--text);text-decoration:none}.brand-mark{width:36px;height:36px;border:1px solid rgba(54,207,255,.55);border-radius:9px;display:grid;place-items:center;color:var(--cyan);font-size:12px;font-weight:900}.brand strong{display:block;letter-spacing:2px;font-size:14px}.brand small{color:var(--muted);font-size:9px}.back{color:var(--muted);text-decoration:none;font-size:12px}.back:hover{color:var(--cyan)}
-.card{width:min(650px,100%);padding:34px;border:1px solid rgba(54,207,255,.14);border-radius:20px;background:linear-gradient(145deg,rgba(13,23,39,.96),rgba(8,16,28,.96));box-shadow:0 25px 80px rgba(0,0,0,.45);animation:cardIn .45s cubic-bezier(.4,0,.2,1) both}@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.eyebrow{color:var(--cyan);font-size:10px;letter-spacing:2px;font-weight:800}.card h1{margin:10px 0 7px;font-size:31px}.sub{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:23px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}label{display:block;color:#b9c8d9;font-size:11px;font-weight:800;letter-spacing:.4px;margin:14px 0 7px}input,select{width:100%;height:44px;border:1px solid rgba(141,161,184,.18);border-radius:9px;background:#07111e;color:var(--text);padding:0 12px;outline:none;font-size:13px;transition:border-color .2s ease,box-shadow .2s ease}select{appearance:auto}input:focus,select:focus{border-color:rgba(54,207,255,.6);box-shadow:0 0 0 3px rgba(54,207,255,.07)}.full{grid-column:1/-1}.password-wrap{position:relative}.password-wrap input{padding-right:60px}.show{position:absolute;right:8px;top:7px;height:30px;padding:0 8px;border:0;border-radius:7px;background:#0d1727;color:var(--muted);cursor:pointer;font-size:11px;transition:color .2s ease}.show:hover{color:var(--cyan)}.terms{display:flex;gap:8px;align-items:flex-start;margin:19px 0;color:var(--muted);font-size:11px;line-height:1.6}.terms input{width:14px;height:14px;flex:0 0 14px;margin-top:1px}.terms a{color:var(--cyan);text-decoration:none}.btn{width:100%;height:46px;border:0;border-radius:10px;background:var(--cyan);color:#03101b;font-weight:900;cursor:pointer;font-size:14px;transition:filter .2s ease,transform .2s ease}.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.message{display:none;margin-top:15px;padding:11px 12px;border-radius:9px;font-size:12px;line-height:1.5;animation:cardIn .25s ease both}.message.show{display:block}.message.error{background:rgba(255,107,122,.08);border:1px solid rgba(255,107,122,.25);color:#ff9aa5}.message.success{background:rgba(93,255,177,.07);border:1px solid rgba(93,255,177,.2);color:var(--green)}.bottom{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}.bottom a{color:var(--cyan);text-decoration:none;font-weight:700;transition:color .2s ease}.bottom a:hover{color:#7fe0ff}.note{margin-top:17px;padding:10px 12px;border:1px solid rgba(54,207,255,.1);background:rgba(54,207,255,.025);border-radius:9px;color:#7c92aa;font-size:11px;line-height:1.5}
+.card{width:min(660px,100%);padding:34px;border:1px solid rgba(54,207,255,.14);border-radius:20px;background:linear-gradient(145deg,rgba(13,23,39,.96),rgba(8,16,28,.96));box-shadow:0 25px 80px rgba(0,0,0,.45);animation:cardIn .45s cubic-bezier(.4,0,.2,1) both}@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.eyebrow{color:var(--cyan);font-size:10px;letter-spacing:2px;font-weight:800}.card h1{margin:10px 0 7px;font-size:31px}.sub{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}label{display:block;color:#b9c8d9;font-size:11px;font-weight:800;letter-spacing:.4px;margin:14px 0 7px}input,select{width:100%;height:44px;border:1px solid rgba(141,161,184,.18);border-radius:9px;background:#07111e;color:var(--text);padding:0 12px;outline:none;font-size:13px;transition:border-color .2s ease,box-shadow .2s ease}select{appearance:auto}input:focus,select:focus{border-color:rgba(54,207,255,.6);box-shadow:0 0 0 3px rgba(54,207,255,.07)}.full{grid-column:1/-1}.password-wrap{position:relative}.password-wrap input{padding-right:60px}.show{position:absolute;right:8px;top:7px;height:30px;padding:0 8px;border:0;border-radius:7px;background:#0d1727;color:var(--muted);cursor:pointer;font-size:11px;transition:color .2s ease}.show:hover{color:var(--cyan)}.terms{display:flex;gap:8px;align-items:flex-start;margin:19px 0;color:var(--muted);font-size:11px;line-height:1.6}.terms input{width:14px;height:14px;flex:0 0 14px;margin-top:1px}.terms a{color:var(--cyan);text-decoration:none}.btn{width:100%;height:46px;border:0;border-radius:10px;background:var(--cyan);color:#03101b;font-weight:900;cursor:pointer;font-size:14px;transition:filter .2s ease,transform .2s ease}.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}.message{display:none;margin-top:15px;padding:11px 12px;border-radius:9px;font-size:12px;line-height:1.5;animation:cardIn .25s ease both}.message.show{display:block}.message.error{background:rgba(255,107,122,.08);border:1px solid rgba(255,107,122,.25);color:#ff9aa5}.message.success{background:rgba(93,255,177,.07);border:1px solid rgba(93,255,177,.2);color:var(--green)}.bottom{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}.bottom a{color:var(--cyan);text-decoration:none;font-weight:700;transition:color .2s ease}.bottom a:hover{color:#7fe0ff}.note{margin-top:17px;padding:10px 12px;border:1px solid rgba(54,207,255,.1);background:rgba(54,207,255,.025);border-radius:9px;color:#7c92aa;font-size:11px;line-height:1.5}
 @media(max-width:650px){.topbar{padding:0 20px}.back{font-size:11px}.card{padding:26px 21px}.grid{grid-template-columns:1fr}.full{grid-column:auto}.card h1{font-size:27px}}
 </style>
 </head>
 <body>
 <header class="topbar"><a class="brand" href="CyberScope.html"><div class="brand-mark">CS</div><div><strong>CYBERSCOPE</strong><small>A Project of TetraByte</small></div></a><a class="back" href="CyberScope.html">← Back to CyberScope</a></header>
-<main class="card"><div class="eyebrow">IDENTITY SETUP</div><h1>Create Account</h1><div class="sub">Create your CyberScope investigator account. After registration, you will be taken to the sign-in page.</div>
+<main class="card">
+<div class="eyebrow">IDENTITY SETUP</div>
+<h1>Create Account</h1>
+<div class="sub">Register your CyberScope investigator account with Supabase Auth.</div>
+
 <form id="registerForm" novalidate><div class="grid">
 <div class="full"><label for="name">FULL NAME *</label><input id="name" type="text" placeholder="Your full name" required></div>
 <div><label for="phone">PHONE NUMBER *</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit number" required></div>
 <div><label for="email">EMAIL ADDRESS *</label><input id="email" type="email" placeholder="you@example.com" required></div>
-<div><label for="organization">ORGANIZATION</label><input id="organization" type="text" placeholder="Optional"></div>
-<div><label for="role">ROLE</label><select id="role"><option value="Investigator">Investigator</option><option value="Analyst">Analyst</option><option value="Researcher">Researcher</option><option value="Student">Student</option></select></div>
+<div><label for="organization">ORGANIZATION</label><input id="organization" type="text" placeholder="e.g. Cyber Crime Unit"></div>
+<div><label for="role">ROLE</label><select id="role"><option value="Investigator">Investigator</option><option value="Analyst">Analyst</option><option value="Lead Investigator">Lead Investigator</option><option value="Researcher">Researcher</option><option value="Student">Student</option></select></div>
 <div><label for="password">PASSWORD *</label><div class="password-wrap"><input id="password" type="password" placeholder="Create a password" required><button type="button" class="show" onclick="togglePassword('password',this)">Show</button></div></div>
 <div><label for="confirmPassword">CONFIRM PASSWORD *</label><div class="password-wrap"><input id="confirmPassword" type="password" placeholder="Repeat password" required><button type="button" class="show" onclick="togglePassword('confirmPassword',this)">Show</button></div></div>
 </div>
-<label class="terms"><input id="terms" type="checkbox"><span>I understand this is a frontend demonstration and agree to use the platform with synthetic or authorized investigation data only.</span></label>
-<button class="btn" type="submit">Create Account →</button><div id="message" class="message"></div>
-</form><div class="bottom">Already have an account? <a href="signin.html">Sign In</a></div><div class="note">Demo authentication: account details are stored only in this browser using localStorage. Real authentication should be connected to the planned backend before production use.</div>
+<label class="terms"><input id="terms" type="checkbox"><span>I agree to use the platform with authorized or synthetic investigation data only.</span></label>
+<button class="btn" id="submitBtn" type="submit">Create Account →</button>
+<div id="message" class="message"></div>
+</form>
+
+<div class="bottom">Already have an account? <a href="signin.html">Sign In</a></div>
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-client.js"></script>
 <script>
-function togglePassword(id,button){const input=document.getElementById(id);const visible=input.type==='text';input.type=visible?'password':'text';button.textContent=visible?'Show':'Hide'}
-function showMessage(text,type){const box=document.getElementById('message');box.textContent=text;box.className='message show '+type}
-document.getElementById('registerForm').addEventListener('submit',function(e){
- e.preventDefault();
- const name=document.getElementById('name').value.trim();
- const phone=document.getElementById('phone').value.trim();
- const email=document.getElementById('email').value.trim().toLowerCase();
- const organization=document.getElementById('organization').value.trim();
- const role=document.getElementById('role').value;
- const password=document.getElementById('password').value;
- const confirmPassword=document.getElementById('confirmPassword').value;
- const terms=document.getElementById('terms').checked;
- if(!name||!phone||!email||!password||!confirmPassword){showMessage('Please complete all required fields.','error');return}
- if(!/^\d{10}$/.test(phone)){showMessage('Please enter a valid 10-digit phone number.','error');return}
- if(password.length<6){showMessage('Password must contain at least 6 characters.','error');return}
- if(password!==confirmPassword){showMessage('Passwords do not match.','error');return}
- if(!terms){showMessage('Please accept the demonstration terms to continue.','error');return}
- localStorage.setItem('cyberscopeUser',JSON.stringify({name,phone,email,organization,role,password}));
- localStorage.removeItem('cyberscopeSession');
- showMessage('Account created successfully. Redirecting to Sign In...','success');
- setTimeout(()=>{window.location.href='signin.html'},900);
+function togglePassword(id,button){
+  const input=document.getElementById(id);
+  const visible=input.type==='text';
+  input.type=visible?'password':'text';
+  button.textContent=visible?'Show':'Hide';
+}
+
+function showMessage(text,type){
+  const box=document.getElementById('message');
+  box.textContent=text;
+  box.className='message show '+type;
+}
+
+document.getElementById('registerForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const name=document.getElementById('name').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const organization=document.getElementById('organization').value.trim();
+  const role=document.getElementById('role').value;
+  const password=document.getElementById('password').value;
+  const confirmPassword=document.getElementById('confirmPassword').value;
+  const terms=document.getElementById('terms').checked;
+  const submitBtn=document.getElementById('submitBtn');
+
+  if(!name||!phone||!email||!password||!confirmPassword){
+    showMessage('Please complete all required fields.','error');
+    return;
+  }
+  if(!/^\d{10}$/.test(phone)){
+    showMessage('Please enter a valid 10-digit phone number.','error');
+    return;
+  }
+  if(password.length<6){
+    showMessage('Password must contain at least 6 characters.','error');
+    return;
+  }
+  if(password!==confirmPassword){
+    showMessage('Passwords do not match.','error');
+    return;
+  }
+  if(!terms){
+    showMessage('Please accept the platform terms to continue.','error');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating Account...';
+
+  try {
+    const res = await window.CyberScopeAuth.signUp({
+      email,
+      password,
+      name,
+      phone,
+      role,
+      organization
+    });
+
+    if(!res.success){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create Account →';
+      showMessage((res.error && res.error.message) || 'Account creation failed. Please try again.', 'error');
+      return;
+    }
+
+    if(res.needsEmailConfirmation){
+      showMessage('Account registered! A confirmation link was dispatched by Supabase. Please verify your email before signing in.', 'success');
+      setTimeout(()=>{window.location.href='signin.html'}, 2500);
+    } else {
+      showMessage('Account created successfully! Redirecting to Sign In...', 'success');
+      setTimeout(()=>{window.location.href='signin.html'}, 900);
+    }
+  } catch(err){
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account →';
+    showMessage('An error occurred during registration: ' + err.message, 'error');
+  }
 });
 </script>
 </body>

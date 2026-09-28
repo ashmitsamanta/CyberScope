@@ -10,12 +10,20 @@ except ImportError:  # pragma: no cover
 from pydantic import Field
 
 
+_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_ENV_PATH = os.path.join(_ROOT_DIR, ".env")
+
+
 class Settings(BaseSettings):
     if SettingsConfigDict is not None:
-        model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="allow")
+        model_config = SettingsConfigDict(
+            env_file=(_ENV_PATH, ".env", "../.env"),
+            env_file_encoding="utf-8",
+            extra="allow"
+        )
     else:
         class Config:
-            env_file = ".env"
+            env_file = (_ENV_PATH, ".env", "../.env")
             env_file_encoding = "utf-8"
             extra = "allow"
     APP_NAME: str = "CYBERSCOPE"
@@ -54,7 +62,12 @@ class Settings(BaseSettings):
     FAN_IN_THRESHOLD: int = 3
     CIRCULAR_FLOW_MAX_HOPS: int = 5
     DORMANCY_DAYS_THRESHOLD: int = 30
-    UNUSUAL_AMOUNT_RATIO: float = 3.0
+    # Supabase Authentication & Project Settings
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
+    REQUIRE_AUTH: bool = False
 
 
 settings = Settings()

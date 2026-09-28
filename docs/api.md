@@ -138,3 +138,61 @@ Body:
 Response:
 Standard OpenAI / NVIDIA NIM chat completion format (`choices[0].message.content`).
 
+---
+
+## 9. Authentication & Supabase
+
+### `GET /auth/config`
+Returns public Supabase client initialization configuration:
+```json
+{
+  "supabase_url": "https://your-project.supabase.co",
+  "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5...",
+  "configured": true,
+  "auth_required": false,
+  "demo_account": {
+    "email": "investigator@cyberscope.io",
+    "password": "password123",
+    "name": "Investigator Demo",
+    "role": "Investigator"
+  }
+}
+```
+
+### `GET /auth/me`
+Returns current authenticated investigator profile claims extracted from the Supabase JWT.
+Headers:
+- `Authorization: Bearer <SUPABASE_JWT_ACCESS_TOKEN>`
+
+Response:
+```json
+{
+  "status": "authenticated",
+  "user": {
+    "id": "uuid-here",
+    "email": "investigator@cyberscope.io",
+    "name": "Special Agent Ray",
+    "role": "Lead Investigator",
+    "phone": "+919876543210",
+    "organization": "National Cyber Crime Cell",
+    "is_demo": false
+  }
+}
+```
+
+### `POST /auth/verify`
+Verifies a Supabase access token payload.
+Body:
+```json
+{
+  "access_token": "<SUPABASE_JWT_ACCESS_TOKEN>"
+}
+```
+Response:
+```json
+{
+  "valid": true,
+  "user": { ... }
+}
+```
+
