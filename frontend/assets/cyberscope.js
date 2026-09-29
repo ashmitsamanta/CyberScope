@@ -1,35 +1,66 @@
 /* =========================================================
    CYBERSCOPE — shared app shell script
-   Loaded by every internal page. Auth logic below is left
-   exactly as it was (localStorage session flag) since it's
-   getting replaced by Supabase — only the nav, active-link
-   highlighting and chat widget were consolidated/fixed here.
+   Loaded by every internal page.
+   Supabase Authentication integration with role synchronization,
+   automatic token propagation, and session protection.
    ========================================================= */
 
-/* ---------- auth (unchanged behavior, just de-duplicated) ---------- */
+/* ---------- auth (Supabase Integration) ---------- */
 function cyberscopeUser(){
+  if(window.CyberScopeAuth && typeof window.CyberScopeAuth.getUser === 'function'){
+    return window.CyberScopeAuth.getUser();
+  }
   try{ return JSON.parse(localStorage.getItem('cyberscopeUser')||'null'); }
   catch(e){ return null; }
 }
+
 function cyberscopeInitials(name){
   return (name||'CS').trim().split(/\s+/).filter(Boolean).slice(0,2)
     .map(function(x){return x[0];}).join('').toUpperCase() || 'CS';
 }
+
 function cyberscopeProtect(){
   var user = cyberscopeUser();
-  if(localStorage.getItem('cyberscopeSession') !== 'active' || !user){
-    location.href = 'signin.html';
+  var session = localStorage.getItem('cyberscopeSession');
+  if(session !== 'active' || !user){
+    var here = location.pathname.split('/').pop() || 'dashboard.html';
+    location.href = 'signin.html?redirect=' + encodeURIComponent(here);
     return false;
   }
+  var name = user.name || user.email || 'User';
   var nameEl = document.getElementById('profileName');
   var avatarEl = document.getElementById('avatar');
-  if(nameEl) nameEl.textContent = user.name || 'User';
-  if(avatarEl) avatarEl.textContent = cyberscopeInitials(user.name);
+  var roleEl = document.querySelector('.prole');
+  if(nameEl) nameEl.textContent = name;
+  if(avatarEl) avatarEl.textContent = cyberscopeInitials(name);
+  if(roleEl && user.role) roleEl.textContent = user.role;
+
+  // Background session verification with Supabase
+  if(window.CyberScopeAuth && typeof window.CyberScopeAuth.verifySession === 'function'){
+    window.CyberScopeAuth.verifySession().then(function(valid){
+      if(!valid){
+        var here = location.pathname.split('/').pop() || 'dashboard.html';
+        location.href = 'signin.html?redirect=' + encodeURIComponent(here);
+      }
+    }).catch(function(err){
+      console.warn("Session verification warning:", err);
+    });
+  }
   return true;
 }
+
 function signOut(){
-  localStorage.removeItem('cyberscopeSession');
-  location.href = 'signin.html';
+  if(window.CyberScopeAuth && typeof window.CyberScopeAuth.signOut === 'function'){
+    window.CyberScopeAuth.signOut().then(function(){
+      location.href = 'signin.html';
+    }).catch(function(){
+      location.href = 'signin.html';
+    });
+  } else {
+    localStorage.removeItem('cyberscopeSession');
+    localStorage.removeItem('cyberscopeAccessToken');
+    location.href = 'signin.html';
+  }
 }
 
 /* ---------- active nav link, set from the current filename ---------- */
@@ -127,9 +158,12 @@ function cyberscopeInitChat(){
     messages.scrollTop = messages.scrollHeight;
 
     try {
+      var authHeaders = (window.CyberScopeAuth && typeof window.CyberScopeAuth.getAuthHeaders === 'function')
+        ? window.CyberScopeAuth.getAuthHeaders()
+        : {};
       var res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders),
         body: JSON.stringify({
           model: 'meta/llama-3.2-11b-vision-instruct',
           messages: [{ role: 'user', content: q }]

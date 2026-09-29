@@ -54,9 +54,22 @@ class CyberScopeHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
         super().end_headers()
 
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.end_headers()
+    def do_GET(self):
+        if self.path.startswith("/api/auth/config"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            supabase_url = os.environ.get("SUPABASE_URL", "")
+            supabase_key = os.environ.get("SUPABASE_ANON_KEY", "")
+            data = {
+                "supabase_url": supabase_url,
+                "supabase_anon_key": supabase_key,
+                "configured": bool(supabase_url and supabase_key),
+                "auth_required": os.environ.get("REQUIRE_AUTH", "").lower() in ("true", "1"),
+            }
+            self.wfile.write(json.dumps(data).encode())
+            return
+        super().do_GET()
 
     def do_POST(self):
         if self.path.startswith("/api/chat") or self.path.startswith("/api/test"):
@@ -109,10 +122,13 @@ def run_server(port=PORT):
             server = HTTPServer(("0.0.0.0", p), CyberScopeHandler)
             has_key = bool(os.environ.get("NVIDIA_API_KEY"))
             key_status = "Loaded from .env" if has_key else "NOT SET in .env"
+            has_sb = bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_ANON_KEY"))
+            sb_status = "Connected (.env)" if has_sb else "Demo Mode (Keys not in .env)"
             print(f"==================================================")
             print(f"  CyberScope AI Server & Proxy Active")
             print(f"  URL: http://localhost:{p}/CyberScope.html")
             print(f"  API Proxy: http://localhost:{p}/api/chat")
+            print(f"  Supabase Auth: {sb_status}")
             print(f"  NVIDIA NIM Key: {key_status}")
             print(f"==================================================")
             server.serve_forever()

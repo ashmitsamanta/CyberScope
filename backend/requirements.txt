@@ -12,3 +12,6 @@ httpx>=0.27.0,<1.0.0
 python-dotenv>=1.0.1,<2.0.0
 pytest>=8.0.0,<9.0.0
 psycopg2-binary>=2.9.9; sys_platform != "win32" or python_version < "3.13"
+pyjwt>=2.8.0,<3.0.0
+
+
