@@ -41,14 +41,71 @@
   <div class="grid">
     <section>
       <div class="card panel">
-        <h2>Current Investigation</h2>
-        <div class="sub" id="wsCaseTitle">CS-1027 · KYC phishing cluster</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+          <div>
+            <h2>Current Investigation</h2>
+            <div class="sub" id="wsCaseTitle">CS-1027 · KYC phishing cluster</div>
+          </div>
+          <a id="openGraphBtn" href="fraud-graph.html?case_id=1" class="btn" style="padding:7px 14px; font-size:12px; display:inline-flex; align-items:center; gap:6px; text-decoration:none; background:rgba(54,207,255,0.12); border-color:var(--cyan); color:var(--cyan); font-weight:600;">◎ Open in Fraud Graph →</a>
+        </div>
         <div class="grid3">
           <div class="card metric"><label>RISK</label><strong id="wsRiskScore">82</strong><small>high signal</small></div>
           <div class="card metric"><label>ENTITIES</label><strong id="wsEntityCount">14</strong><small>linked</small></div>
           <div class="card metric"><label>PATHS</label><strong id="wsPathCount">6</strong><small>connected routes</small></div>
         </div>
       </div>
+
+      <div class="card panel" style="margin-top:17px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div>
+            <h2>Linked Investigation Entities</h2>
+            <div class="sub">Entities and indicators connected to this incident</div>
+          </div>
+          <a href="entity-explorer.html" style="font-size:11px; color:var(--cyan); text-decoration:none;">Open Entity Explorer &rarr;</a>
+        </div>
+        <div class="table-scroll">
+          <table class="table" id="wsEntitiesTable">
+            <thead>
+              <tr>
+                <th>TYPE</th>
+                <th>VALUE</th>
+                <th>RISK</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="wsEntitiesList">
+              <tr>
+                <td>PHONE</td>
+                <td>+91 98XX 4412</td>
+                <td><span class="tag high">HIGH</span></td>
+                <td>
+                  <a href="fraud-graph.html?entity_id=1&search=%2B91%2098XX%204412" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none; margin-right:4px;">◎ Graph</a>
+                  <a href="entity-explorer.html?search=%2B91%2098XX%204412" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none;">Explorer</a>
+                </td>
+              </tr>
+              <tr>
+                <td>DOMAIN</td>
+                <td>pay-help.in</td>
+                <td><span class="tag high">HIGH</span></td>
+                <td>
+                  <a href="fraud-graph.html?entity_id=2&search=pay-help.in" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none; margin-right:4px;">◎ Graph</a>
+                  <a href="entity-explorer.html?search=pay-help.in" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none;">Explorer</a>
+                </td>
+              </tr>
+              <tr>
+                <td>UPI ID</td>
+                <td>scamdesk@upi</td>
+                <td><span class="tag medium">MEDIUM</span></td>
+                <td>
+                  <a href="fraud-graph.html?entity_id=3&search=scamdesk%40upi" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none; margin-right:4px;">◎ Graph</a>
+                  <a href="entity-explorer.html?search=scamdesk%40upi" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none;">Explorer</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card panel" style="margin-top:17px">
         <h2>Investigator Notes</h2>
         <div class="sub">Local demo notes · connect to backend persistence later</div>
@@ -64,9 +121,21 @@
       <div class="sub">Structured workflow</div>
       <div class="list">
         <div class="item"><b>1 · Review report</b><p>Read the submitted incident and classification signal.</p></div>
-        <div class="item"><b>2 · Expand graph</b><p>Trace connected entities and shortest paths.</p></div>
-        <div class="item"><b>3 · Check transactions</b><p>Inspect linked financial movement.</p></div>
-        <div class="item"><b>4 · Correlate campaign</b><p>Compare related incidents and infrastructure.</p></div>
+        <div class="item">
+          <b>2 · Expand graph</b>
+          <p>Trace connected entities and shortest paths.</p>
+          <a id="asideGraphLink" href="fraud-graph.html?case_id=1" style="font-size:11px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:3px;">Open Fraud Graph &rarr;</a>
+        </div>
+        <div class="item">
+          <b>3 · Check transactions</b>
+          <p>Inspect linked financial movement.</p>
+          <a href="transaction-explorer.html" style="font-size:11px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:3px;">Inspect Transactions &rarr;</a>
+        </div>
+        <div class="item">
+          <b>4 · Correlate campaign</b>
+          <p>Compare related incidents and infrastructure.</p>
+          <a href="campaign-explorer.html" style="font-size:11px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:3px;">Campaign Explorer &rarr;</a>
+        </div>
         <div class="item"><b>5 · Export report</b><p>Frontend button placeholder for /report/{id}/export.</p></div>
       </div>
       <button class="btn" style="width:100%;margin-top:12px" onclick="alert('Report export will connect to the backend endpoint later.')">Export Investigation Report</button>
@@ -115,16 +184,60 @@ function saveNotes(){
 
 async function loadCaseDetail(){
   var params = new URLSearchParams(window.location.search);
-  var caseId = params.get('case_id');
-  if(!caseId) return;
+  var caseId = params.get('case_id') || '1';
+  var openGraphBtn = document.getElementById('openGraphBtn');
+  var asideGraphLink = document.getElementById('asideGraphLink');
+  if(openGraphBtn) openGraphBtn.href = 'fraud-graph.html?case_id=' + encodeURIComponent(caseId);
+  if(asideGraphLink) asideGraphLink.href = 'fraud-graph.html?case_id=' + encodeURIComponent(caseId);
+
+  var authHeaders = (window.CyberScopeAuth && typeof window.CyberScopeAuth.getAuthHeaders === 'function')
+    ? window.CyberScopeAuth.getAuthHeaders()
+    : {};
+
   try {
-    var res = await fetch('/api/cases/' + encodeURIComponent(caseId));
+    var res = await fetch('/api/cases/' + encodeURIComponent(caseId), { headers: authHeaders });
     if(res.ok){
       var d = await res.json();
       if(d.case_number || d.title) document.getElementById('wsCaseTitle').textContent = (d.case_number || ('CS-' + caseId)) + ' · ' + (d.title || 'Fraud Investigation');
       if(d.risk_score !== undefined) document.getElementById('wsRiskScore').textContent = Math.round(d.risk_score);
       if(d.entity_count !== undefined) document.getElementById('wsEntityCount').textContent = d.entity_count;
       if(d.connected_paths !== undefined) document.getElementById('wsPathCount').textContent = Array.isArray(d.connected_paths) ? d.connected_paths.length : d.connected_paths;
+    }
+  } catch(e) {}
+
+  // Load linked entities for this case from graph API
+  try {
+    var gRes = await fetch('/api/graph/case/' + encodeURIComponent(caseId), { headers: authHeaders });
+    if(gRes.ok){
+      var gData = await gRes.json();
+      var nodes = gData.nodes || [];
+      var entityNodes = nodes.filter(function(n){ return (n.entity_type || '').toUpperCase() !== 'CASE'; });
+      if(entityNodes.length > 0){
+        var tbody = document.getElementById('wsEntitiesList');
+        if(tbody){
+          tbody.innerHTML = '';
+          entityNodes.forEach(function(ent){
+            var tr = document.createElement('tr');
+            var entId = ent.numeric_id !== undefined ? ent.numeric_id : (ent.id ? String(ent.id).replace(/^e-/, '') : '');
+            var entVal = ent.label || ent.value || '';
+            var rScore = typeof ent.risk_score === 'number' ? ent.risk_score : 50;
+            var badgeClass = rScore >= 70 ? 'high' : (rScore >= 40 ? 'medium' : 'low');
+            var badgeText = rScore >= 70 ? 'HIGH' : (rScore >= 40 ? 'MEDIUM' : 'LOW');
+
+            var graphHref = 'fraud-graph.html?' + (entId ? ('entity_id=' + encodeURIComponent(entId) + '&') : '') + 'search=' + encodeURIComponent(entVal);
+            var explorerHref = 'entity-explorer.html?search=' + encodeURIComponent(entVal);
+
+            tr.innerHTML = '<td>' + (ent.entity_type || 'ENTITY').toUpperCase() + '</td>' +
+                           '<td>' + entVal + '</td>' +
+                           '<td><span class="tag ' + badgeClass + '">' + badgeText + '</span></td>' +
+                           '<td>' +
+                             '<a href="' + graphHref + '" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none; margin-right:4px;">◎ Graph</a>' +
+                             '<a href="' + explorerHref + '" class="btn" style="padding:3px 8px; font-size:11px; text-decoration:none;">Explorer</a>' +
+                           '</td>';
+            tbody.appendChild(tr);
+          });
+        }
+      }
     }
   } catch(e) {}
 }

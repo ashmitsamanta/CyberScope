@@ -18,6 +18,8 @@ class GraphEdge(BaseModel):
     target: str
     relationship_type: str
     confidence: float = 1.0
+    amount: Optional[float] = None
+    channel: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 

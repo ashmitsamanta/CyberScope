@@ -62,10 +62,94 @@ def test_graph_endpoints():
     assert "nodes" in g_data
     assert "edges" in g_data
     assert len(g_data["nodes"]) > 0
+    # Prominence metadata checks
+    first_node = g_data["nodes"][0]
+    assert "metadata" in first_node
+    assert "degree" in first_node["metadata"]
+    assert "connected_case_count" in first_node["metadata"]
 
     shared_resp = client.get("/api/graph/shared-infrastructure")
     assert shared_resp.status_code == 200
     assert "shared_infrastructure" in shared_resp.json()
+
+
+def test_graph_case_subgraph_by_number_and_id():
+    # 1. By string case_number CS-1024
+    case_str_resp = client.get("/api/graph/case/CS-1024")
+    assert case_str_resp.status_code == 200
+    cs_data = case_str_resp.json()
+    assert "nodes" in cs_data
+    assert "edges" in cs_data
+    assert "stats" in cs_data
+    assert len(cs_data["nodes"]) > 0
+    assert len(cs_data["edges"]) > 0
+    assert cs_data["stats"]["case_number"] == "CS-1024"
+    assert cs_data["stats"]["case_id"] == 1
+    assert "nodes_count" in cs_data["stats"]
+
+    # 2. By integer ID 1
+    case_id_resp = client.get("/api/graph/case/1")
+    assert case_id_resp.status_code == 200
+    id_data = case_id_resp.json()
+    assert len(id_data["nodes"]) == len(cs_data["nodes"])
+    assert len(id_data["edges"]) == len(cs_data["edges"])
+
+    # 3. By another case CS-1027
+    cs1027_resp = client.get("/api/graph/case/CS-1027")
+    assert cs1027_resp.status_code == 200
+    assert len(cs1027_resp.json()["nodes"]) > 0
+
+
+def test_graph_filtering_and_search():
+    # 1. Filter by entity_type=DOMAIN
+    dom_resp = client.get("/api/graph?entity_type=DOMAIN")
+    assert dom_resp.status_code == 200
+    dom_data = dom_resp.json()
+    assert len(dom_data["nodes"]) > 0
+    assert all(n["entity_type"] == "DOMAIN" for n in dom_data["nodes"])
+    dom_node_ids = {n["id"] for n in dom_data["nodes"]}
+    for edge in dom_data["edges"]:
+        assert edge["source"] in dom_node_ids
+        assert edge["target"] in dom_node_ids
+
+    # 2. Filter by search=kyc
+    kyc_resp = client.get("/api/graph?search=kyc")
+    assert kyc_resp.status_code == 200
+    kyc_data = kyc_resp.json()
+    assert len(kyc_data["nodes"]) > 0
+    assert kyc_data["stats"]["filters"]["search"] == "kyc"
+    kyc_node_ids = {n["id"] for n in kyc_data["nodes"]}
+    for edge in kyc_data["edges"]:
+        assert edge["source"] in kyc_node_ids
+        assert edge["target"] in kyc_node_ids
+
+    # 3. Filter by min_risk threshold
+    risk_resp = client.get("/api/graph?min_risk=80")
+    assert risk_resp.status_code == 200
+    risk_data = risk_resp.json()
+    assert len(risk_data["nodes"]) > 0
+    assert all(n["risk_score"] >= 80.0 for n in risk_data["nodes"])
+
+
+def test_graph_neighborhood_by_identifier():
+    # 1. By normalized domain
+    dom_resp = client.get("/api/graph/entity/secure-kyc-update.com")
+    assert dom_resp.status_code == 200
+    dom_data = dom_resp.json()
+    assert len(dom_data["nodes"]) > 0
+    assert dom_data["stats"]["center_node"] == "e-1"
+
+    # 2. By normalized phone
+    phone_resp = client.get("/api/graph/entity/+919686579303")
+    assert phone_resp.status_code == 200
+    phone_data = phone_resp.json()
+    assert len(phone_data["nodes"]) > 0
+    assert phone_data["stats"]["center_node"] == "e-4"
+
+    # 3. By numeric ID
+    id_resp = client.get("/api/graph/entity/1")
+    assert id_resp.status_code == 200
+    assert len(id_resp.json()["nodes"]) > 0
 
 
 def test_transactions_and_trace():

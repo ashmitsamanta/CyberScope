@@ -118,3 +118,47 @@ def test_chat_proxy_fallback_contract():
     assert "choices" in data
     assert len(data["choices"]) > 0
     assert "message" in data["choices"][0]
+
+
+import uuid
+
+def test_register_frontend_contract():
+    # Test duplicate detection contract
+    dup_res = client.post("/api/auth/check-email", json={"email": "investigator@cyberscope.io"})
+    assert dup_res.status_code == 200
+    assert dup_res.json()["exists"] is True
+
+    test_email = f"integration_{uuid.uuid4().hex[:8]}@agency.gov.in"
+
+    # Test registration initiation contract
+    init_res = client.post("/api/auth/register/initiate", json={
+        "name": "Integration Test Officer",
+        "phone": "9123456780",
+        "email": test_email,
+        "password": "TestPassword123!",
+        "role": "Investigator",
+        "organization": "Fraud Unit"
+    })
+    assert init_res.status_code == 200
+    init_data = init_res.json()
+    assert init_data["status"] == "verification_initiated"
+    assert "preview" not in init_data
+    assert "delivery" in init_data
+
+    from app.services.notification_service import notification_service
+    outbox = notification_service.get_test_outbox()
+    email_entry = next(e for e in reversed(outbox["emails"]) if e["to_email"] == test_email)
+    sms_entry = next(s for s in reversed(outbox["sms"]) if s["code"] is not None)
+
+    # Test verification contract
+    verify_res = client.post("/api/auth/register/verify", json={
+        "email": test_email,
+        "email_otp": email_entry["code"],
+        "sms_otp": sms_entry["code"]
+    })
+    assert verify_res.status_code == 200
+    verify_data = verify_res.json()
+    assert verify_data["status"] == "verified"
+    assert "access_token" in verify_data
+    assert verify_data["user"]["email"] == test_email
+

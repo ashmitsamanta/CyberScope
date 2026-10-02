@@ -116,3 +116,32 @@ def test_security_redos_resistance():
     assert isinstance(res1, dict)
     assert isinstance(res2, dict)
     assert isinstance(res3, dict)
+
+
+def test_graph_analyzer_neighborhood_and_centrality():
+    analyzer = GraphAnalyzer()
+    entities = [
+        {"id": 1, "value": "victim", "normalized_value": "victim", "entity_type": "PERSON", "risk_score": 10},
+        {"id": 2, "value": "hub_mule", "normalized_value": "hub_mule", "entity_type": "BANK_ACCOUNT", "risk_score": 85},
+        {"id": 3, "value": "leaf1", "normalized_value": "leaf1", "entity_type": "BANK_ACCOUNT", "risk_score": 60},
+        {"id": 4, "value": "leaf2", "normalized_value": "leaf2", "entity_type": "BANK_ACCOUNT", "risk_score": 60},
+        {"id": 5, "value": "leaf3", "normalized_value": "leaf3", "entity_type": "BANK_ACCOUNT", "risk_score": 60},
+    ]
+    relationships = [
+        {"id": 1, "source_entity_id": 1, "target_entity_id": 2, "relationship_type": "TRANSFERRED_TO"},
+        {"id": 2, "source_entity_id": 2, "target_entity_id": 3, "relationship_type": "TRANSFERRED_TO"},
+        {"id": 3, "source_entity_id": 2, "target_entity_id": 4, "relationship_type": "TRANSFERRED_TO"},
+        {"id": 4, "source_entity_id": 2, "target_entity_id": 5, "relationship_type": "TRANSFERRED_TO"},
+    ]
+    analyzer.build_from_records(entities, relationships)
+
+    # Test neighborhood centered at hub_mule (e-2)
+    nh = analyzer.get_neighborhood("e-2", max_hops=1)
+    assert len(nh["nodes"]) == 5
+    assert len(nh["edges"]) == 4
+
+    # Test centrality anomaly detection (hub has degree 4)
+    anomalies = analyzer.calculate_centrality_anomalies(top_k=5)
+    assert len(anomalies) == 1
+    assert anomalies[0]["node_id"] == "e-2"
+    assert anomalies[0]["degree"] == 4

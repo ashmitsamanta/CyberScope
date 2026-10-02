@@ -42,14 +42,30 @@
     <section class="card panel">
       <h2>Transaction Activity</h2>
       <div class="sub">Synthetic transaction records for demonstration</div>
+      <div class="toolbar">
+        <input class="search" id="txSearch" placeholder="Search transaction ID, account or case...">
+        <button class="btn" onclick="filterTransactions()">Search</button>
+      </div>
       <div class="table-scroll">
         <table class="table" id="txTable">
-          <thead><tr><th>TX ID</th><th>FROM</th><th>TO</th><th>AMOUNT</th><th>CASE</th><th>FLAG</th></tr></thead>
+          <thead><tr><th>TX ID</th><th>FROM</th><th>TO</th><th>AMOUNT</th><th>CASE</th><th>FLAG</th><th>ACTIONS</th></tr></thead>
           <tbody>
-            <tr><td>TX-8841</td><td>AC-1091</td><td>UPI-4482</td><td>₹48,500</td><td>CS-1027</td><td><span class="tag high">FLAGGED</span></td></tr>
-            <tr><td>TX-8837</td><td>AC-2014</td><td>UPI-4482</td><td>₹31,200</td><td>CS-1024</td><td><span class="tag high">FLAGGED</span></td></tr>
-            <tr><td>TX-8819</td><td>AC-7712</td><td>AC-4482</td><td>₹19,800</td><td>CS-1019</td><td><span class="tag medium">REVIEW</span></td></tr>
-            <tr><td>TX-8803</td><td>AC-3118</td><td>UPI-1901</td><td>₹8,400</td><td>CS-1013</td><td><span class="tag low">NORMAL</span></td></tr>
+            <tr>
+              <td>TX-8841</td><td>AC-1091</td><td>UPI-4482</td><td>₹48,500</td><td>CS-1027</td><td><span class="tag high">FLAGGED</span></td>
+              <td><a href="fraud-graph.html?search=AC-1091" class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap; text-decoration:none;">◎ Graph</a></td>
+            </tr>
+            <tr>
+              <td>TX-8837</td><td>AC-2014</td><td>UPI-4482</td><td>₹31,200</td><td>CS-1024</td><td><span class="tag high">FLAGGED</span></td>
+              <td><a href="fraud-graph.html?search=AC-2014" class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap; text-decoration:none;">◎ Graph</a></td>
+            </tr>
+            <tr>
+              <td>TX-8819</td><td>AC-7712</td><td>AC-4482</td><td>₹19,800</td><td>CS-1019</td><td><span class="tag medium">REVIEW</span></td>
+              <td><a href="fraud-graph.html?search=AC-7712" class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap; text-decoration:none;">◎ Graph</a></td>
+            </tr>
+            <tr>
+              <td>TX-8803</td><td>AC-3118</td><td>UPI-1901</td><td>₹8,400</td><td>CS-1013</td><td><span class="tag low">NORMAL</span></td>
+              <td><a href="fraud-graph.html?search=AC-3118" class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap; text-decoration:none;">◎ Graph</a></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -99,9 +115,31 @@
 <script src="assets/cyberscope.js"></script>
 <script>
 cyberscopeProtect();
+function filterTransactions(){
+  var q = (document.getElementById('txSearch').value || '').toLowerCase().trim();
+  document.querySelectorAll('#txTable tbody tr').forEach(function(r){
+    r.style.display = (!q || r.innerText.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+function checkUrlSearch(){
+  var params = new URLSearchParams(window.location.search);
+  var s = params.get('search');
+  if(s){
+    var input = document.getElementById('txSearch');
+    if(input){
+      input.value = s;
+      filterTransactions();
+    }
+  }
+}
+
 async function loadLiveTransactions(){
   try {
-    var res = await fetch('/api/transactions');
+    var authHeaders = (window.CyberScopeAuth && typeof window.CyberScopeAuth.getAuthHeaders === 'function')
+      ? window.CyberScopeAuth.getAuthHeaders()
+      : {};
+    var res = await fetch('/api/transactions', { headers: authHeaders });
     if(res.ok){
       var txs = await res.json();
       if(Array.isArray(txs) && txs.length > 0){
@@ -114,19 +152,24 @@ async function loadLiveTransactions(){
             var badgeClass = isFlagged ? 'high' : 'low';
             var badgeText = isFlagged ? 'FLAGGED' : 'NORMAL';
             var amt = typeof t.amount === 'number' ? ('₹' + t.amount.toLocaleString()) : (t.amount || '₹0');
+            var targetEntity = t.from_account || t.to_account || t.transaction_ref || '';
+            var graphHref = 'fraud-graph.html?search=' + encodeURIComponent(targetEntity);
             tr.innerHTML = '<td>' + (t.transaction_ref || t.tx_hash || 'TX-001') + '</td>' +
                            '<td>' + (t.from_account || '') + '</td>' +
                            '<td>' + (t.to_account || '') + '</td>' +
                            '<td>' + amt + '</td>' +
                            '<td>' + (t.case_number || 'CS-1027') + '</td>' +
-                           '<td><span class="tag ' + badgeClass + '">' + badgeText + '</span></td>';
+                           '<td><span class="tag ' + badgeClass + '">' + badgeText + '</span></td>' +
+                           '<td><a href="' + graphHref + '" class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap; text-decoration:none;">◎ Graph</a></td>';
             tbody.appendChild(tr);
           });
+          checkUrlSearch();
         }
       }
     }
   } catch(e) {}
 }
+checkUrlSearch();
 loadLiveTransactions();
 </script>
 </body>

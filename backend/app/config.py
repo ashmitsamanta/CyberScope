@@ -69,5 +69,28 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str = ""
     REQUIRE_AUTH: bool = False
 
+    # Email / SMTP Configuration
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@cyberscope.io"
+    SMTP_FROM_NAME: str = "CyberScope Security"
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
+    SMTP_TIMEOUT_SECONDS: int = 10
+
+    # SMS Configuration (supports "twilio", "fast2sms", "webhook", "mock")
+    SMS_PROVIDER: str = "twilio"
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_FROM_NUMBER: str = ""
+    TWILIO_MESSAGING_SERVICE_SID: str = ""
+    FAST2SMS_API_KEY: str = ""
+    SMS_WEBHOOK_URL: str = ""
+
+    # Dispatch & Verification Testing
+    VERIFICATION_MOCK_DISPATCH: bool = False
+
 
 settings = Settings()

@@ -38,27 +38,36 @@
     <div class="status"><span class="dot-pulse">●</span> SYSTEM OPERATIONAL</div>
   </section>
 
-  <div class="grid3">
+  <div class="grid3" id="campaignGrid">
     <div class="card panel">
       <div class="eyebrow">CAMPAIGN 01</div>
       <h2>Utility-Bill Cluster</h2>
       <div class="sub">12 linked cases</div>
       <div class="metric"><label>SHARED ENTITIES</label><strong>19</strong><small>5 domains · 8 phones</small></div>
-      <span class="tag high">HIGH CORRELATION</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+        <span class="tag high">HIGH CORRELATION</span>
+        <a href="fraud-graph.html?search=Utility-Bill%20Cluster" class="btn" style="padding:4px 10px; font-size:11px; text-decoration:none;">◎ Explore in Graph →</a>
+      </div>
     </div>
     <div class="card panel">
       <div class="eyebrow">CAMPAIGN 02</div>
       <h2>KYC Phishing Network</h2>
       <div class="sub">8 linked cases</div>
       <div class="metric"><label>SHARED ENTITIES</label><strong>14</strong><small>4 domains · 6 phones</small></div>
-      <span class="tag high">HIGH CORRELATION</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+        <span class="tag high">HIGH CORRELATION</span>
+        <a href="fraud-graph.html?search=KYC%20Phishing%20Network" class="btn" style="padding:4px 10px; font-size:11px; text-decoration:none;">◎ Explore in Graph →</a>
+      </div>
     </div>
     <div class="card panel">
       <div class="eyebrow">CAMPAIGN 03</div>
       <h2>Impersonation Cluster</h2>
       <div class="sub">7 linked cases</div>
       <div class="metric"><label>SHARED ENTITIES</label><strong>10</strong><small>3 phones · 2 UPI IDs</small></div>
-      <span class="tag medium">REVIEW</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+        <span class="tag medium">REVIEW</span>
+        <a href="fraud-graph.html?search=Impersonation%20Cluster" class="btn" style="padding:4px 10px; font-size:11px; text-decoration:none;">◎ Explore in Graph →</a>
+      </div>
     </div>
   </div>
 
@@ -100,6 +109,48 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-client.js"></script>
 <script src="assets/cyberscope.js"></script>
-<script>cyberscopeProtect();</script>
+<script>
+cyberscopeProtect();
+
+async function loadLiveCampaigns(){
+  try {
+    var authHeaders = (window.CyberScopeAuth && typeof window.CyberScopeAuth.getAuthHeaders === 'function')
+      ? window.CyberScopeAuth.getAuthHeaders()
+      : {};
+    var res = await fetch('/api/campaigns', { headers: authHeaders });
+    if(res.ok){
+      var camps = await res.json();
+      if(Array.isArray(camps) && camps.length > 0){
+        var container = document.getElementById('campaignGrid');
+        if(container){
+          container.innerHTML = '';
+          camps.forEach(function(camp, idx){
+            var div = document.createElement('div');
+            div.className = 'card panel';
+            var num = String(idx + 1).padStart(2, '0');
+            var name = camp.name || ('Campaign ' + num);
+            var cases = camp.case_count || (camp.cases ? camp.cases.length : 1);
+            var entCount = camp.entity_count || camp.shared_entity_count || (camp.key_entities ? camp.key_entities.length : 0);
+            var tagClass = (camp.severity || '').toLowerCase() === 'high' || (camp.risk_score && camp.risk_score >= 70) ? 'high' : 'medium';
+            var tagText = tagClass === 'high' ? 'HIGH CORRELATION' : 'REVIEW';
+            var graphHref = 'fraud-graph.html?search=' + encodeURIComponent(name);
+
+            div.innerHTML = '<div class="eyebrow">CAMPAIGN ' + num + '</div>' +
+                            '<h2>' + name + '</h2>' +
+                            '<div class="sub">' + cases + ' linked cases</div>' +
+                            '<div class="metric"><label>SHARED ENTITIES</label><strong>' + entCount + '</strong><small>cross-incident signals</small></div>' +
+                            '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">' +
+                              '<span class="tag ' + tagClass + '">' + tagText + '</span>' +
+                              '<a href="' + graphHref + '" class="btn" style="padding:4px 10px; font-size:11px; text-decoration:none;">◎ Explore in Graph →</a>' +
+                            '</div>';
+            container.appendChild(div);
+          });
+        }
+      }
+    }
+  } catch(e) {}
+}
+loadLiveCampaigns();
+</script>
 </body>
 </html>

@@ -7,6 +7,7 @@ from app.models.message import Message
 from app.models.indicator import Indicator
 from app.models.campaign import Campaign
 from app.models.investigation import InvestigationLog
+from app.models.user import User, UserVerification
 
 __all__ = [
     "Base",
@@ -19,4 +20,6 @@ __all__ = [
     "Indicator",
     "Campaign",
     "InvestigationLog",
+    "User",
+    "UserVerification",
 ]
