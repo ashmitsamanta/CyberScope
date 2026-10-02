@@ -14,6 +14,8 @@ from app.models.message import Message
 from app.models.indicator import Indicator
 from app.models.campaign import Campaign
 from app.models.investigation import InvestigationLog
+from app.models.user import User
+from app.services.auth_service import hash_password
 from scripts.generate_dataset import generate_synthetic_dataset
 from app.services.graph_service import graph_service
 
@@ -47,7 +49,28 @@ def seed_database(db_session=None, drop_existing=True):
     # 2. Generate dataset
     data = generate_synthetic_dataset(profile="demo")
 
-    # 3. Seed Campaigns
+    # 3. Seed Demo Investigator User
+    print("Checking / Seeding Demo Investigator User...")
+    demo_user = db.query(User).filter(User.email == "investigator@cyberscope.io").first()
+    if not demo_user:
+        demo_user = User(
+            email="investigator@cyberscope.io",
+            password_hash=hash_password("password123"),
+            name="Investigator Demo",
+            phone="+919876543210",
+            role="Investigator",
+            organization="TetraByte Cyber Defense",
+            is_verified_email=True,
+            is_verified_phone=True,
+            is_active=True
+        )
+        db.add(demo_user)
+        db.commit()
+        print(" - Demo Investigator User seeded: investigator@cyberscope.io (password: password123)")
+    else:
+        print(" - Demo Investigator User already exists in database.")
+
+    # 4. Seed Campaigns
     print("Inserting Campaigns...")
     camp_map = {}
     for c in data["campaigns"]:
@@ -177,6 +200,7 @@ def seed_database(db_session=None, drop_existing=True):
     camps = db.query(Campaign).count()
     ents = db.query(Entity).count()
     txs = db.query(Transaction).count()
+    users_count = db.query(User).count()
 
     if db_session is None:
         db.close()
@@ -188,6 +212,7 @@ def seed_database(db_session=None, drop_existing=True):
     print(f" - Detected Campaigns: {camps} (Expected: 3)")
     print(f" - Linked Entities: {ents}")
     print(f" - Financial Transactions: {txs}")
+    print(f" - Registered Users: {users_count}")
     print("Primary Demo Scenario: 'Operation Phantom KYC' loaded on case CS-1024.\n")
 
 

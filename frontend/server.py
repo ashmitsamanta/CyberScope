@@ -54,6 +54,47 @@ class CyberScopeHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
         super().end_headers()
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
+    def _proxy_to_backend(self, method: str):
+        target_url = f"http://127.0.0.1:8000{self.path}"
+        headers = {k: v for k, v in self.headers.items() if k.lower() not in ("host", "content-length")}
+        headers["Host"] = "127.0.0.1:8000"
+
+        body = None
+        if method in ("POST", "PUT", "PATCH"):
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > 0:
+                body = self.rfile.read(content_length)
+
+        req = urllib.request.Request(target_url, data=body, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                res_body = resp.read()
+                self.send_response(resp.status)
+                for header, val in resp.headers.items():
+                    if header.lower() not in ("transfer-encoding", "content-length"):
+                        self.send_header(header, val)
+                self.send_header("Content-Length", str(len(res_body)))
+                self.end_headers()
+                self.wfile.write(res_body)
+        except urllib.error.HTTPError as e:
+            err_body = e.read()
+            self.send_response(e.code)
+            for header, val in e.headers.items():
+                if header.lower() not in ("transfer-encoding", "content-length"):
+                    self.send_header(header, val)
+            self.send_header("Content-Length", str(len(err_body)))
+            self.end_headers()
+            self.wfile.write(err_body)
+        except Exception as e:
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"detail": f"FastAPI backend connection error: {str(e)}"}).encode())
+
     def do_GET(self):
         if self.path.startswith("/api/auth/config"):
             self.send_response(200)
@@ -68,6 +109,9 @@ class CyberScopeHandler(SimpleHTTPRequestHandler):
                 "auth_required": os.environ.get("REQUIRE_AUTH", "").lower() in ("true", "1"),
             }
             self.wfile.write(json.dumps(data).encode())
+            return
+        elif self.path.startswith("/api/"):
+            self._proxy_to_backend("GET")
             return
         super().do_GET()
 
@@ -111,6 +155,8 @@ class CyberScopeHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
+        elif self.path.startswith("/api/"):
+            self._proxy_to_backend("POST")
         else:
             self.send_response(404)
             self.end_headers()

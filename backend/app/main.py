@@ -29,6 +29,9 @@ logger = logging.getLogger("cyberscope")
 
 import time
 from app.models.case import Case
+from app.models.user import User
+from app.services.auth_service import hash_password
+from scripts.generate_dataset import generate_synthetic_dataset
 from scripts.seed_demo import seed_database
 
 
@@ -62,6 +65,24 @@ async def lifespan(app: FastAPI):
             logger.info(f"Database contains {case_count} cases. Synchronizing Fraud Graph...")
             graph_service.sync_from_db(db)
             logger.info("Fraud Graph synchronized successfully.")
+
+        # Ensure demo investigator user is always present
+        demo_user = db.query(User).filter(User.email == "investigator@cyberscope.io").first()
+        if not demo_user:
+            demo_user = User(
+                email="investigator@cyberscope.io",
+                password_hash=hash_password("password123"),
+                name="Investigator Demo",
+                phone="+919876543210",
+                role="Investigator",
+                organization="TetraByte Cyber Defense",
+                is_verified_email=True,
+                is_verified_phone=True,
+                is_active=True
+            )
+            db.add(demo_user)
+            db.commit()
+            logger.info("Demo investigator user verified and seeded.")
         db.close()
     except Exception as e:
         logger.warning(f"Startup database check/seed error: {e}")

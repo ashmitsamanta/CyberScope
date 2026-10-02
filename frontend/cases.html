@@ -49,12 +49,24 @@
       </div>
       <div class="table-scroll">
         <table class="table" id="caseTable">
-          <thead><tr><th>CASE</th><th>INCIDENT</th><th>ENTITIES</th><th>RISK</th><th>STATUS</th></tr></thead>
+          <thead><tr><th>CASE</th><th>INCIDENT</th><th>ENTITIES</th><th>RISK</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
           <tbody>
-            <tr onclick="window.location.href='investigation-workspace.html?case_id=1'" style="cursor:pointer"><td>CS-1027</td><td>KYC phishing cluster</td><td>14</td><td><span class="tag high">HIGH</span></td><td>Investigating</td></tr>
-            <tr onclick="window.location.href='investigation-workspace.html?case_id=2'" style="cursor:pointer"><td>CS-1024</td><td>Fake utility-bill payment</td><td>9</td><td><span class="tag high">HIGH</span></td><td>Escalated</td></tr>
-            <tr onclick="window.location.href='investigation-workspace.html?case_id=3'" style="cursor:pointer"><td>CS-1019</td><td>Digital-arrest impersonation</td><td>7</td><td><span class="tag medium">MEDIUM</span></td><td>Review</td></tr>
-            <tr onclick="window.location.href='investigation-workspace.html?case_id=4'" style="cursor:pointer"><td>CS-1013</td><td>UPI collection scam</td><td>5</td><td><span class="tag medium">MEDIUM</span></td><td>Open</td></tr>
+            <tr onclick="window.location.href='investigation-workspace.html?case_id=1'" style="cursor:pointer">
+              <td>CS-1027</td><td>KYC phishing cluster</td><td>14</td><td><span class="tag high">HIGH</span></td><td>Investigating</td>
+              <td onclick="event.stopPropagation()"><button class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap;" onclick="event.stopPropagation(); window.location.href='fraud-graph.html?case_id=1'">◎ Explore Graph</button></td>
+            </tr>
+            <tr onclick="window.location.href='investigation-workspace.html?case_id=2'" style="cursor:pointer">
+              <td>CS-1024</td><td>Fake utility-bill payment</td><td>9</td><td><span class="tag high">HIGH</span></td><td>Escalated</td>
+              <td onclick="event.stopPropagation()"><button class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap;" onclick="event.stopPropagation(); window.location.href='fraud-graph.html?case_id=2'">◎ Explore Graph</button></td>
+            </tr>
+            <tr onclick="window.location.href='investigation-workspace.html?case_id=3'" style="cursor:pointer">
+              <td>CS-1019</td><td>Digital-arrest impersonation</td><td>7</td><td><span class="tag medium">MEDIUM</span></td><td>Review</td>
+              <td onclick="event.stopPropagation()"><button class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap;" onclick="event.stopPropagation(); window.location.href='fraud-graph.html?case_id=3'">◎ Explore Graph</button></td>
+            </tr>
+            <tr onclick="window.location.href='investigation-workspace.html?case_id=4'" style="cursor:pointer">
+              <td>CS-1013</td><td>UPI collection scam</td><td>5</td><td><span class="tag medium">MEDIUM</span></td><td>Open</td>
+              <td onclick="event.stopPropagation()"><button class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap;" onclick="event.stopPropagation(); window.location.href='fraud-graph.html?case_id=4'">◎ Explore Graph</button></td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -113,7 +125,10 @@ function filterCases(){
 
 async function loadLiveCases(){
   try {
-    var res = await fetch('/api/cases');
+    var authHeaders = (window.CyberScopeAuth && typeof window.CyberScopeAuth.getAuthHeaders === 'function')
+      ? window.CyberScopeAuth.getAuthHeaders()
+      : {};
+    var res = await fetch('/api/cases', { headers: authHeaders });
     if(res.ok){
       var cases = await res.json();
       if(Array.isArray(cases) && cases.length > 0){
@@ -123,20 +138,37 @@ async function loadLiveCases(){
           cases.forEach(function(c){
             var tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
-            tr.onclick = function(){ window.location.href = 'investigation-workspace.html?case_id=' + (c.id || c.case_id); };
-            var badgeClass = (c.severity || '').toLowerCase() === 'high' ? 'high' : 'medium';
-            tr.innerHTML = '<td>' + (c.case_number || ('CS-' + c.id)) + '</td>' +
+            var cid = c.id || c.case_id;
+            var caseParam = encodeURIComponent(cid || c.case_number || '');
+            tr.onclick = function(){ window.location.href = 'investigation-workspace.html?case_id=' + caseParam; };
+            var badgeClass = (c.severity || '').toLowerCase() === 'high' || (c.severity || '').toLowerCase() === 'critical' ? 'high' : 'medium';
+            tr.innerHTML = '<td>' + (c.case_number || ('CS-' + (c.id || ''))) + '</td>' +
                            '<td>' + (c.title || 'Reported Incident') + '</td>' +
                            '<td>' + (c.entity_count || 0) + '</td>' +
                            '<td><span class="tag ' + badgeClass + '">' + (c.severity || 'MEDIUM').toUpperCase() + '</span></td>' +
-                           '<td>' + (c.status || 'Active') + '</td>';
+                           '<td>' + (c.status || 'Active') + '</td>' +
+                           '<td onclick="event.stopPropagation()"><button class="btn" style="padding:4px 9px; font-size:11px; white-space:nowrap;" onclick="event.stopPropagation(); window.location.href=\'fraud-graph.html?case_id=' + caseParam + '\'">◎ Explore Graph</button></td>';
             tbody.appendChild(tr);
           });
+          checkUrlSearch();
         }
       }
     }
   } catch(e) {}
 }
+
+function checkUrlSearch(){
+  var params = new URLSearchParams(window.location.search);
+  var s = params.get('search');
+  if(s){
+    var input = document.getElementById('caseSearch');
+    if(input){
+      input.value = s;
+      filterCases();
+    }
+  }
+}
+checkUrlSearch();
 loadLiveCases();
 
 async function createNewCase(){
