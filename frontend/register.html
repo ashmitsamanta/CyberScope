@@ -1568,19 +1568,23 @@ document.getElementById('registerForm').addEventListener('submit', async functio
 document.getElementById('verifyForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   const emailOtpInput = document.getElementById('emailOtp');
-  const smsOtpInput = document.getElementById('smsOtp');
-  const emailOtp = (emailOtpInput.value || '').trim().toUpperCase();
-  const smsOtp = (smsOtpInput.value || '').trim().toUpperCase();
+  const emailOtp = (emailOtpInput && emailOtpInput.value ? emailOtpInput.value : '').trim().toUpperCase();
   const verifyBtn = document.getElementById('verifyBtn');
+  const email = (currentRegistration.email || (document.getElementById('email') && document.getElementById('email').value) || '').trim().toLowerCase();
 
-  if (!emailOtp || !smsOtp) {
-    showMessage('step2Message', 'Please enter both the Email and SMS verification security codes.', 'error');
-    if (!emailOtp) emailOtpInput.focus();
-    else smsOtpInput.focus();
+  if (!email) {
+    showMessage('step2Message', 'Registration session expired or email missing. Please return to Step 1.', 'error');
     return;
   }
-  if (emailOtp.length !== 6 || smsOtp.length !== 6) {
-    showMessage('step2Message', 'Both verification codes must be exactly 6 characters.', 'error');
+
+  if (!emailOtp) {
+    showMessage('step2Message', 'Please enter the 6-digit email verification security code.', 'error');
+    if (emailOtpInput) emailOtpInput.focus();
+    return;
+  }
+  if (emailOtp.length !== 6) {
+    showMessage('step2Message', 'The verification code must be exactly 6 characters.', 'error');
+    if (emailOtpInput) emailOtpInput.focus();
     return;
   }
 
@@ -1596,9 +1600,8 @@ document.getElementById('verifyForm').addEventListener('submit', async function(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: currentRegistration.email,
-        email_otp: emailOtp,
-        sms_otp: smsOtp
+        email: email,
+        email_otp: emailOtp
       })
     });
 
@@ -1619,11 +1622,11 @@ document.getElementById('verifyForm').addEventListener('submit', async function(
     // Persist session to localStorage
     const userObj = data.user || {
       id: 'usr-' + Date.now(),
-      email: currentRegistration.email,
-      name: currentRegistration.name,
-      role: currentRegistration.role,
-      phone: currentRegistration.phone,
-      organization: currentRegistration.organization,
+      email: email,
+      name: currentRegistration.name || (email ? email.split('@')[0] : 'Investigator'),
+      role: currentRegistration.role || 'Investigator',
+      phone: currentRegistration.phone || '',
+      organization: currentRegistration.organization || '',
       is_demo: false
     };
 
@@ -1635,13 +1638,15 @@ document.getElementById('verifyForm').addEventListener('submit', async function(
 
     // Success checkmark animation & message
     const msgBox = document.getElementById('step2Message');
-    msgBox.className = 'message show';
-    msgBox.innerHTML = `
-      <div class="success-banner">
-        <div class="success-icon-wrap">✓</div>
-        <div>✓ Identity Verified! Account created in database. Redirecting to workspace...</div>
-      </div>
-    `;
+    if (msgBox) {
+      msgBox.className = 'message show';
+      msgBox.innerHTML = `
+        <div class="success-banner">
+          <div class="success-icon-wrap">✓</div>
+          <div>✓ Identity Verified! Account created in database. Redirecting to workspace...</div>
+        </div>
+      `;
+    }
 
     verifyBtn.style.background = 'linear-gradient(135deg, #5dffb1, #2ec47d)';
     verifyBtn.style.color = '#021a0d';
@@ -1665,7 +1670,6 @@ function sanitizeOtp(val) {
 }
 
 const emailOtpEl = document.getElementById('emailOtp');
-const smsOtpEl = document.getElementById('smsOtp');
 
 if (emailOtpEl) {
   emailOtpEl.addEventListener('paste', function(e) {
@@ -1674,35 +1678,15 @@ if (emailOtpEl) {
     const pastedText = clipboardData ? clipboardData.getData('text') : '';
     const clean = sanitizeOtp(pastedText);
     this.value = clean;
-    if (clean.length === 6 && smsOtpEl) {
-      smsOtpEl.focus();
-    }
-  });
-
-  emailOtpEl.addEventListener('input', function() {
-    this.value = sanitizeOtp(this.value);
-    if (this.value.length === 6 && smsOtpEl) {
-      smsOtpEl.focus();
-    }
-  });
-}
-
-if (smsOtpEl) {
-  smsOtpEl.addEventListener('paste', function(e) {
-    e.preventDefault();
-    const clipboardData = e.clipboardData || window.clipboardData;
-    const pastedText = clipboardData ? clipboardData.getData('text') : '';
-    const clean = sanitizeOtp(pastedText);
-    this.value = clean;
-    if (clean.length === 6 && emailOtpEl && emailOtpEl.value.length === 6) {
+    if (clean.length === 6) {
       const verifyBtn = document.getElementById('verifyBtn');
       if (verifyBtn) verifyBtn.focus();
     }
   });
 
-  smsOtpEl.addEventListener('input', function() {
+  emailOtpEl.addEventListener('input', function() {
     this.value = sanitizeOtp(this.value);
-    if (this.value.length === 6 && emailOtpEl && emailOtpEl.value.length === 6) {
+    if (this.value.length === 6) {
       const verifyBtn = document.getElementById('verifyBtn');
       if (verifyBtn) verifyBtn.focus();
     }

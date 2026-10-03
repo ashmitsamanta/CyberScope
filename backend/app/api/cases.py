@@ -51,12 +51,17 @@ def list_cases(
     return results
 
 
-@router.get("/{case_id}", response_model=CaseDetailResponse)
-def get_case(case_id: int, db: Session = Depends(get_db)):
-    case = db.query(Case).filter(Case.id == case_id).first()
+@router.get("/{case_identifier}", response_model=CaseDetailResponse)
+def get_case(case_identifier: str, db: Session = Depends(get_db)):
+    case = None
+    if case_identifier.isdigit():
+        case = db.query(Case).filter(Case.id == int(case_identifier)).first()
+    if not case:
+        case = db.query(Case).filter(Case.case_number.ilike(case_identifier.strip())).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
+    case_id = case.id
     # Risk breakdown calculation
     risk_breakdown = RiskEngine.evaluate_case(db, case_id)
 
@@ -86,14 +91,18 @@ def get_case(case_id: int, db: Session = Depends(get_db)):
     return case_dict
 
 
-@router.get("/{case_id}/timeline")
-def get_case_timeline(case_id: int, db: Session = Depends(get_db)):
-    case = db.query(Case).filter(Case.id == case_id).first()
+@router.get("/{case_identifier}/timeline")
+def get_case_timeline(case_identifier: str, db: Session = Depends(get_db)):
+    case = None
+    if case_identifier.isdigit():
+        case = db.query(Case).filter(Case.id == int(case_identifier)).first()
+    if not case:
+        case = db.query(Case).filter(Case.case_number.ilike(case_identifier.strip())).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    events = TimelineService.get_case_timeline(db, case_id)
-    return {"case_id": case_id, "case_number": case.case_number, "events": events}
+    events = TimelineService.get_case_timeline(db, case.id)
+    return {"case_id": case.id, "case_number": case.case_number, "events": events}
 
 
 import html

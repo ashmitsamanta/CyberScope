@@ -17,7 +17,9 @@ from app.api.search import router as search_router
 from app.api.stats import router as stats_router
 from app.api.chat import router as chat_router
 from app.api.auth import router as auth_router
+from app.api.threat_map import router as threat_map_router
 from app.services.graph_service import graph_service
+from app.services.threat_map_service import ThreatMapService
 
 # Logging setup
 logging.basicConfig(
@@ -83,6 +85,10 @@ async def lifespan(app: FastAPI):
             db.add(demo_user)
             db.commit()
             logger.info("Demo investigator user verified and seeded.")
+
+        # Ensure Threat Intelligence Map nodes are seeded
+        ThreatMapService.ensure_seeded(db)
+        logger.info("Threat Intelligence Map nodes verified and synchronized.")
         db.close()
     except Exception as e:
         logger.warning(f"Startup database check/seed error: {e}")
@@ -134,6 +140,7 @@ app.include_router(search_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_router)
 app.include_router(auth_router, prefix="/api")
+app.include_router(threat_map_router, prefix="/api")
 
 
 @app.get("/")

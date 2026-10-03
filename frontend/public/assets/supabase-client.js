@@ -141,9 +141,13 @@
                 localStorage.setItem(STORAGE_SESSION_KEY, 'active');
                 localStorage.setItem(STORAGE_TOKEN_KEY, session.access_token);
               } else if (event === 'SIGNED_OUT') {
-                localStorage.removeItem(STORAGE_USER_KEY);
-                localStorage.removeItem(STORAGE_SESSION_KEY);
-                localStorage.removeItem(STORAGE_TOKEN_KEY);
+                var activeUser = getUser();
+                // Only clear if not an active database investigator
+                if (!activeUser || activeUser.is_demo) {
+                  localStorage.removeItem(STORAGE_USER_KEY);
+                  localStorage.removeItem(STORAGE_SESSION_KEY);
+                  localStorage.removeItem(STORAGE_TOKEN_KEY);
+                }
               }
             });
           }
@@ -652,16 +656,18 @@
     if (state.configured && state.client) {
       try {
         var sbRes = await state.client.auth.getSession();
-        if (sbRes.error || !sbRes.data.session) {
-          localStorage.removeItem(STORAGE_SESSION_KEY);
-          localStorage.removeItem(STORAGE_TOKEN_KEY);
-          return false;
+        if (sbRes && sbRes.data && sbRes.data.session) {
+          return true;
         }
-        return true;
       } catch (e) {}
     }
 
-    // 3. Fallback for demo or offline session
+    // 3. Honor valid local database investigator sessions
+    // Do NOT let null Supabase cloud session destroy authenticated database investigators
+    if (session === 'active' && user && (user.email || user.id)) {
+      return true;
+    }
+
     return isAuthenticated();
   }
 

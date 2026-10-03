@@ -148,17 +148,45 @@ def test_register_frontend_contract():
     from app.services.notification_service import notification_service
     outbox = notification_service.get_test_outbox()
     email_entry = next(e for e in reversed(outbox["emails"]) if e["to_email"] == test_email)
-    sms_entry = next(s for s in reversed(outbox["sms"]) if s["code"] is not None)
 
     # Test verification contract
     verify_res = client.post("/api/auth/register/verify", json={
         "email": test_email,
-        "email_otp": email_entry["code"],
-        "sms_otp": sms_entry["code"]
+        "email_otp": email_entry["code"]
     })
     assert verify_res.status_code == 200
     verify_data = verify_res.json()
     assert verify_data["status"] == "verified"
     assert "access_token" in verify_data
     assert verify_data["user"]["email"] == test_email
+
+
+def test_threat_map_frontend_contract():
+    # 1. Attacker telemetry endpoint
+    res_attackers = client.get("/api/threat-map/attackers?limit=10")
+    assert res_attackers.status_code == 200
+    attackers = res_attackers.json()
+    assert isinstance(attackers, list)
+    assert len(attackers) > 0
+    attacker = attackers[0]
+    for key in ("id", "ip", "hostname", "latitude", "longitude", "city", "state", "attack_type", "severity", "risk_score", "status"):
+        assert key in attacker, f"Missing key '{key}' in attacker node"
+    
+    # 2. Threat stats endpoint
+    res_stats = client.get("/api/threat-map/stats")
+    assert res_stats.status_code == 200
+    stats = res_stats.json()
+    for key in ("total_attackers", "active_attacks", "critical_threats", "top_attack_types", "top_hotspots", "total_blocked_requests"):
+        assert key in stats, f"Missing key '{key}' in threat stats"
+
+    # 3. Live feed endpoint
+    res_feed = client.get("/api/threat-map/live-feed?limit=5")
+    assert res_feed.status_code == 200
+    feed = res_feed.json()
+    assert isinstance(feed, list)
+    assert len(feed) > 0
+    event = feed[0]
+    for key in ("id", "timestamp", "attacker_ip", "city", "state", "attack_type", "severity", "target", "action_taken"):
+        assert key in event, f"Missing key '{key}' in live feed event"
+
 

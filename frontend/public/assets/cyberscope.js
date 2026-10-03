@@ -39,6 +39,11 @@ function cyberscopeProtect(){
   if(window.CyberScopeAuth && typeof window.CyberScopeAuth.verifySession === 'function'){
     window.CyberScopeAuth.verifySession().then(function(valid){
       if(!valid){
+        var localUser = cyberscopeUser();
+        var localSession = localStorage.getItem('cyberscopeSession');
+        if (localSession === 'active' && localUser && (localUser.email || localUser.id)) {
+          return;
+        }
         var here = location.pathname.split('/').pop() || 'dashboard.html';
         location.href = 'signin.html?redirect=' + encodeURIComponent(here);
       }
