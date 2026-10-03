@@ -15,9 +15,11 @@ from app.models.indicator import Indicator
 from app.models.campaign import Campaign
 from app.models.investigation import InvestigationLog
 from app.models.user import User
+from app.models.threat_node import ThreatNode
 from app.services.auth_service import hash_password
 from scripts.generate_dataset import generate_synthetic_dataset
 from app.services.graph_service import graph_service
+from app.services.threat_map_service import ThreatMapService
 
 
 import time
@@ -189,6 +191,10 @@ def seed_database(db_session=None, drop_existing=True):
 
     db.commit()
 
+    # 8.5 Seed Threat Intelligence Attacker Infrastructure
+    print("Inserting Threat Intelligence Attacker Infrastructure...")
+    ThreatMapService.ensure_seeded(db)
+
     # 9. Sync Fraud Graph
     print("Building In-Memory Fraud Graph...")
     graph_service.sync_from_db(db, force=True)
@@ -201,6 +207,7 @@ def seed_database(db_session=None, drop_existing=True):
     ents = db.query(Entity).count()
     txs = db.query(Transaction).count()
     users_count = db.query(User).count()
+    threat_nodes_count = db.query(ThreatNode).count()
 
     if db_session is None:
         db.close()
@@ -208,9 +215,10 @@ def seed_database(db_session=None, drop_existing=True):
     print("\n[OK] SEEDING COMPLETE! Verification KPIs:")
     print(f" - Total Cases: {total_cases} (Expected: 42)")
     print(f" - Critical Cases: {crit_cases} (Expected: 2)")
-    print(f" - High Risk Cases: {high_cases} (Expected: 7)")
-    print(f" - Detected Campaigns: {camps} (Expected: 3)")
+    print(f" - High Risk Cases: {high_cases} (Expected: 10)")
+    print(f" - Detected Campaigns: {camps} (Expected: 6)")
     print(f" - Linked Entities: {ents}")
+    print(f" - Threat Attacker Nodes: {threat_nodes_count} (Expected: 26)")
     print(f" - Financial Transactions: {txs}")
     print(f" - Registered Users: {users_count}")
     print("Primary Demo Scenario: 'Operation Phantom KYC' loaded on case CS-1024.\n")

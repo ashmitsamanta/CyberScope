@@ -258,6 +258,28 @@ def generate_synthetic_dataset(profile: str = "demo", num_accounts: int = 100, n
     circ_b = make_entity("BANK_ACCOUNT", "SIM-ACC-CIRCULAR-B", 65.0)
     circ_c = make_entity("BANK_ACCOUNT", "SIM-ACC-CIRCULAR-C", 65.0)
 
+    # Campaign mule accounts receiving victim payouts from the secondary campaigns.
+    # The threat-map wirer binds each of these to its operator IP via ACCESSED_FROM.
+    mule_ebill = make_entity("BANK_ACCOUNT", "SIM-ACC-EBILL-MULE-401", 78.0, {"branch": "Synthetic UPOS Branch"})
+    mule_customs = make_entity("BANK_ACCOUNT", "SIM-ACC-CUSTOMS-402", 76.0)
+    mule_fastag = make_entity("BANK_ACCOUNT", "SIM-ACC-FASTAG-403", 80.0)
+    mule_loan = make_entity("BANK_ACCOUNT", "SIM-ACC-LOAN-404", 84.0)
+    mule_kisan = make_entity("BANK_ACCOUNT", "SIM-ACC-KISAN-405", 77.0)
+
+    upi_ebill = make_entity("UPI_ID", "quickflow88@ybl", 84.0)
+    upi_customs = make_entity("UPI_ID", "clearancefast@ibl", 82.0)
+    relationships.append({"source_entity_id": upi_ebill["id"], "target_entity_id": mule_ebill["id"], "relationship_type": "LINKED_TO", "confidence": 0.97})
+    relationships.append({"source_entity_id": upi_customs["id"], "target_entity_id": mule_customs["id"], "relationship_type": "LINKED_TO", "confidence": 0.97})
+
+    # Per-campaign attacker handsets. Victim-facing CONTACTED edges are added below;
+    # ROUTED_THROUGH links to SIM-box / C2 IPs are added by the threat-map wirer.
+    ent_phone_simswap = make_entity("PHONE", phones[3], 82.0, {"role": "SIM_SWAP_DISPATCH", "carrier": "Synthetic Telecom B"})
+    ent_phone_ebill = make_entity("PHONE", phones[4], 80.0, {"role": "BULK_LURE_DISPATCH", "carrier": "Synthetic Telecom C"})
+    ent_phone_loan = make_entity("PHONE", phones[5], 81.0, {"role": "RECOVERY_AGENT_HARASSMENT", "carrier": "Synthetic Telecom D"})
+    ent_phone_customs = make_entity("PHONE", phones[6], 78.0, {"role": "CUSTOMS_AGENT_IMPERSONATION", "carrier": "Synthetic Telecom E"})
+    ent_phone_fastag = make_entity("PHONE", phones[7], 76.0, {"role": "FASTAG_LURE_DISPATCH", "carrier": "Synthetic Telecom F"})
+    ent_phone_kisan = make_entity("PHONE", phones[8], 81.0, {"role": "GOVT_SCHEME_IMPERSONATION", "carrier": "Synthetic Telecom G"})
+
     c_tx1 = {
         "id": len(transactions) + 1,
         "transaction_ref": f"TX-SIM-{9000 + len(transactions):04d}",
@@ -325,7 +347,46 @@ def generate_synthetic_dataset(profile: str = "demo", num_accounts: int = 100, n
         "last_seen": (base_time + timedelta(days=19)).isoformat(),
         "shared_indicators": {"domains": ["parcel-customs-clear.net"], "upi_ids": ["clearancefast@ibl"]}
     }
-    campaigns.extend([camp_util, camp_parcel])
+    camp_fastag = {
+        "id": 4,
+        "campaign_id": "CAMP-FASTAG-SKIMMER",
+        "name": "Fastag Recharge Skimmer Syndicate",
+        "description": "Cloned FASTag recharge portals intercepting UPI collect approvals from vehicle owners.",
+        "risk_score": 81.0,
+        "case_count": 1,
+        "entity_count": 8,
+        "status": "ACTIVE",
+        "first_seen": (base_time + timedelta(days=10)).isoformat(),
+        "last_seen": (base_time + timedelta(days=17)).isoformat(),
+        "shared_indicators": {"domains": ["fastag-quick-recharge.in"], "upi_ids": ["fastagrecharge@ibl"]}
+    }
+    camp_loan = {
+        "id": 5,
+        "campaign_id": "CAMP-LOAN-APK-EXTORTION",
+        "name": "Instant Loan APK Extortion Ring",
+        "description": "Predatory instant-loan APKs exfiltrating contact lists, followed by recovery-agent extortion cycles.",
+        "risk_score": 88.0,
+        "case_count": 1,
+        "entity_count": 9,
+        "status": "ACTIVE",
+        "first_seen": (base_time + timedelta(days=11)).isoformat(),
+        "last_seen": (base_time + timedelta(days=20)).isoformat(),
+        "shared_indicators": {"domains": ["rupee-instant-loan.org"], "apk_package": "com.cashfast.rupee.loan"}
+    }
+    camp_kisan = {
+        "id": 6,
+        "campaign_id": "CAMP-PMKISAN-EKYC",
+        "name": "PM-Kisan Impersonation Nexus",
+        "description": "Fake PM-Kisan eKYC portals harvesting Aadhaar OTPs to hold farmer installment payouts.",
+        "risk_score": 79.0,
+        "case_count": 1,
+        "entity_count": 8,
+        "status": "MONITORED",
+        "first_seen": (base_time + timedelta(days=12)).isoformat(),
+        "last_seen": (base_time + timedelta(days=18)).isoformat(),
+        "shared_indicators": {"domains": ["pmkisan-ekyc-portal.org"], "lure_format": "Hindi SMS"}
+    }
+    campaigns.extend([camp_util, camp_parcel, camp_fastag, camp_loan, camp_kisan])
 
     # -------------------------------------------------------------
     # Generate background cases to reach EXACTLY:
@@ -358,17 +419,18 @@ def generate_synthetic_dataset(profile: str = "demo", num_accounts: int = 100, n
         "risk_score": 94.0,
         "campaign_id": None,
         "created_at": (base_time + timedelta(days=8)).isoformat(),
-        "updated_at": (base_time + timedelta(days=8)).isoformat()
+        "updated_at": (base_time + timedelta(days=8)).isoformat(),
+        "metadata": {"victim_name": "Arjun Mehta", "stolen_amount": 250000.0, "attack_vector": "SIM_SWAP_ATO"}
     }
     cases.append(c_crit2)
 
     # 3 more High Risk Cases
     high_scenarios = [
-        ("CS-1030", "Electricity Disconnection Phishing - Cluster Case A", 82.0, camp_util["id"]),
-        ("CS-1031", "Electricity Disconnection Phishing - Cluster Case B", 78.0, camp_util["id"]),
-        ("CS-1032", "Detained Consignment Duty Scam - Case Alpha", 75.0, camp_parcel["id"]),
+        ("CS-1030", "Electricity Disconnection Phishing - Cluster Case A", 82.0, camp_util["id"], "Deepak Yadav", 18700.0),
+        ("CS-1031", "Electricity Disconnection Phishing - Cluster Case B", 78.0, camp_util["id"], "Farida Khan", 9450.0),
+        ("CS-1032", "Detained Consignment Duty Scam - Case Alpha", 75.0, camp_parcel["id"], "Rohit Malhotra", 14999.0),
     ]
-    for cid, ctitle, crisk, camp_ref in high_scenarios:
+    for cid, ctitle, crisk, camp_ref, v_name, s_amt in high_scenarios:
         cases.append({
             "id": len(cases) + 1,
             "case_number": cid,
@@ -380,12 +442,35 @@ def generate_synthetic_dataset(profile: str = "demo", num_accounts: int = 100, n
             "risk_score": crisk,
             "campaign_id": camp_ref,
             "created_at": (base_time + timedelta(days=9 + len(cases) % 5)).isoformat(),
-            "updated_at": (base_time + timedelta(days=9 + len(cases) % 5)).isoformat()
+            "updated_at": (base_time + timedelta(days=9 + len(cases) % 5)).isoformat(),
+            "metadata": {"victim_name": v_name, "stolen_amount": s_amt}
         })
 
-    # Now generate remaining 33 cases (Medium: 40-68, Low: 10-38)
-    for i in range(33):
-        c_num = f"CS-{1033 + i}"
+    # Campaign cases CS-1033 .. CS-1035 backed by the Fastag / Loan / PM-Kisan campaigns
+    campaign_cases = [
+        ("CS-1033", "FASTag Recharge Skim - UPI Collect Abuse", 81.0, camp_fastag["id"], "Priyanka Deshmukh", 12400.0),
+        ("CS-1034", "Instant Loan APK Extortion - Contact List Weaponized", 88.0, camp_loan["id"], "Imran Sheikh", 45000.0),
+        ("CS-1035", "PM-Kisan eKYC Hold - Aadhaar OTP Harvest", 79.0, camp_kisan["id"], "Lakshmi Prasad", 23800.0),
+    ]
+    for cid, ctitle, crisk, camp_ref, v_name, s_amt in campaign_cases:
+        cases.append({
+            "id": len(cases) + 1,
+            "case_number": cid,
+            "title": ctitle,
+            "description": f"Simulated report: {ctitle}.",
+            "status": "INVESTIGATING",
+            "severity": "HIGH",
+            "source": "AUTOMATED_CORRELATION",
+            "risk_score": crisk,
+            "campaign_id": camp_ref,
+            "created_at": (base_time + timedelta(days=10 + len(cases) % 4)).isoformat(),
+            "updated_at": (base_time + timedelta(days=10 + len(cases) % 4)).isoformat(),
+            "metadata": {"victim_name": v_name, "stolen_amount": s_amt}
+        })
+
+    # Now generate remaining 30 cases (Medium: 40-68, Low: 10-38)
+    for i in range(30):
+        c_num = f"CS-{1036 + i}"
         is_med = i < 18  # 18 medium, 15 low
         c_risk = round(random.uniform(42.0, 65.0), 1) if is_med else round(random.uniform(12.0, 36.0), 1)
         c_sev = "MEDIUM" if is_med else "LOW"
@@ -404,6 +489,89 @@ def generate_synthetic_dataset(profile: str = "demo", num_accounts: int = 100, n
             "campaign_id": 2 if i in (2, 3, 4) else (3 if i in (5, 6) else None),
             "created_at": c_t.isoformat(),
             "updated_at": c_t.isoformat()
+        })
+
+    # -------------------------------------------------------------
+    # Victims for curated cases CS-1029 .. CS-1035 (person, account, phone,
+    # lure message, and payout transaction, following the Phantom KYC pattern).
+    # CONTACTED / ROUTED_THROUGH edges to attacker infrastructure are added by
+    # ThreatMapService.wire_graph_topology, which owns the attacker IP topology.
+    # -------------------------------------------------------------
+    secondary_victims = [
+        (6, "CS-1029", "Arjun Mehta", 250000.0, circ_a, ent_phone_simswap, "NEFT",
+         "NetBanking Beneficiary Alert",
+         "Alert: A new payee was linked to your corporate netbanking profile after a SIM re-registration event and an OTP for a Rs 2,50,000 transfer was auto-forwarded. If not initiated by you, call your relationship manager immediately.",
+         None),
+        (7, "CS-1030", "Deepak Yadav", 18700.0, mule_ebill, ent_phone_ebill, "UPI",
+         "Electricity Disconnection Notice",
+         "Notice: Power supply at your premises is scheduled for disconnection tonight at 9 PM for unpaid arrears of Rs 1,870. Settle immediately at https://bijli-bill-alert.in to restore supply.",
+         "https://bijli-bill-alert.in"),
+        (8, "CS-1031", "Farida Khan", 9450.0, mule_ebill, ent_phone_ebill, "UPI",
+         "Electricity Disconnection Notice",
+         "Final reminder: your electricity account is overdue by Rs 945 and disconnection is scheduled tonight. Clear the bill at https://bijli-bill-alert.in before 9 PM.",
+         "https://bijli-bill-alert.in"),
+        (9, "CS-1032", "Rohit Malhotra", 14999.0, mule_customs, ent_phone_customs, "UPI",
+         "Customs Clearance Required",
+         "Your inbound international parcel (AWB IN984128) is held at the customs facility. Pay the clearance duty of Rs 14,999 at https://customs-duty-clearance.net to schedule delivery.",
+         "https://customs-duty-clearance.net"),
+        (10, "CS-1033", "Priyanka Deshmukh", 12400.0, mule_fastag, ent_phone_fastag, "UPI",
+         "FASTag Recharge Failure",
+         "Your vehicle RC DL-3S-AB-4471 risks blacklisting due to a failed FASTag recharge. Complete the pending recharge of Rs 12,400 at https://fastag-quick-recharge.in within 4 hours.",
+         "https://fastag-quick-recharge.in"),
+        (11, "CS-1034", "Imran Sheikh", 45000.0, mule_loan, ent_phone_loan, "UPI",
+         "Loan Recovery Escalation",
+         "Recovery escalation: your outstanding loan dues have moved to the legal desk. Settle Rs 45,000 via https://rupee-instant-loan.org/settle within 24 hours to stop contact-list escalation.",
+         "https://rupee-instant-loan.org/settle"),
+        (12, "CS-1035", "Lakshmi Prasad", 23800.0, mule_kisan, ent_phone_kisan, "UPI",
+         "PM-Kisan Installment Hold",
+         "PM-Kisan: your 18th installment is on hold pending eKYC re-verification. Complete Aadhaar OTP verification at https://pmkisan-ekyc-portal.org today to release the payout.",
+         "https://pmkisan-ekyc-portal.org"),
+    ]
+
+    for v_idx, (c_id, c_num, v_name, s_amt, receiver_ent, attacker_phone, tx_channel, msg_subject, msg_text, msg_url) in enumerate(secondary_victims):
+        v_person = make_entity("PERSON", v_name, 10.0)
+        v_acc = make_entity("BANK_ACCOUNT", f"SIM-ACC-VICTIM-{210 + v_idx}", 15.0)
+        v_phone = make_entity("PHONE", phones[15 + v_idx], 10.0)
+
+        relationships.append({"source_entity_id": v_person["id"], "target_entity_id": v_acc["id"], "relationship_type": "OWNS", "confidence": 1.0})
+        relationships.append({"source_entity_id": v_person["id"], "target_entity_id": v_phone["id"], "relationship_type": "USED_BY", "confidence": 1.0})
+
+        case_meta = next(cs for cs in cases if cs["case_number"] == c_num)
+        c_ent = make_entity("CASE", c_num, case_meta["risk_score"], {"title": case_meta["title"]})
+        relationships.append({"source_entity_id": v_person["id"], "target_entity_id": c_ent["id"], "relationship_type": "REPORTED_IN", "confidence": 1.0})
+
+        messages.append({
+            "id": len(messages) + 1,
+            "timestamp": case_meta["created_at"],
+            "sender_phone": attacker_phone["value"],
+            "receiver_phone": v_phone["value"],
+            "channel": "SMS",
+            "subject": msg_subject,
+            "content": msg_text,
+            "url": msg_url,
+            "case_id": c_id
+        })
+
+        tx_time = datetime.fromisoformat(case_meta["created_at"]) + timedelta(minutes=25)
+        transactions.append({
+            "id": len(transactions) + 1,
+            "transaction_ref": f"TX-SIM-{9000 + len(transactions):04d}",
+            "timestamp": tx_time.isoformat(),
+            "sender_entity_id": v_acc["id"],
+            "receiver_entity_id": receiver_ent["id"],
+            "amount": s_amt,
+            "currency": "INR",
+            "channel": tx_channel,
+            "case_id": c_id,
+            "status": "FLAGGED",
+            "metadata": {"channel_desc": "Immediate Payment Service" if tx_channel == "UPI" else "National Electronic Funds Transfer"}
+        })
+        relationships.append({
+            "source_entity_id": v_acc["id"],
+            "target_entity_id": receiver_ent["id"],
+            "relationship_type": "TRANSFERRED_TO",
+            "confidence": 1.0,
+            "metadata": {"amount": s_amt}
         })
 
     # Add background normal accounts and transactions

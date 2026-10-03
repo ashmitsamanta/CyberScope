@@ -560,6 +560,7 @@ class NetworkXGraphService(IGraphService):
                         "numeric_id": data.get("numeric_id", 0),
                         "entity_type": data.get("entity_type"),
                         "value": data.get("label"),
+                        "label": data.get("label"),
                         "connected_case_count": len(connected_cases),
                         "connected_cases": list(connected_cases),
                         "risk_score": data.get("risk_score", 0.0),

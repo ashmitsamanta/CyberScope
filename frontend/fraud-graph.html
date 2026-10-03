@@ -474,8 +474,8 @@
 .type-PHONE { background: rgba(93, 255, 177, 0.15); color: #5dffb1; border: 1px solid rgba(93, 255, 177, 0.4); }
 .type-DOMAIN, .type-URL { background: rgba(155, 124, 255, 0.15); color: #9b7cff; border: 1px solid rgba(155, 124, 255, 0.4); }
 .type-UPI_ID { background: rgba(255, 190, 59, 0.15); color: #ffbe3b; border: 1px solid rgba(255, 190, 59, 0.4); }
-.type-BANK_ACCOUNT { background: rgba(56, 139, 255, 0.15); color: #388bff; border: 1px solid rgba(56, 139, 255, 0.4); }
-.type-DEVICE, .type-IP_ADDRESS { background: rgba(141, 161, 184, 0.15); color: #8da1b8; border: 1px solid rgba(141, 161, 184, 0.4); }
+.type-DEVICE { background: rgba(141, 161, 184, 0.15); color: #8da1b8; border: 1px solid rgba(141, 161, 184, 0.4); }
+.type-IP_ADDRESS { background: rgba(255, 77, 79, 0.18); color: #ff7875; border: 1px solid rgba(255, 77, 79, 0.5); }
 .type-PERSON { background: rgba(255, 126, 182, 0.15); color: #ff7eb6; border: 1px solid rgba(255, 126, 182, 0.4); }
 
 .risk-meter {
@@ -771,6 +771,7 @@
       <a href="dashboard.html">Dashboard</a>
       <a href="cases.html">Cases</a>
       <a href="fraud-graph.html" class="active">Fraud Graph</a>
+      <a href="threat-map.html">Threat Map</a>
       <a href="entity-explorer.html">Entities</a>
       <a href="transaction-explorer.html">Transactions</a>
       <a href="campaign-explorer.html">Campaigns</a>
@@ -862,7 +863,10 @@
           <span class="chip-dot" style="background:#388bff"></span> Bank Accounts <span class="chip-count" id="count-BANK_ACCOUNT">0</span>
         </div>
         <div class="chip" data-filter="DEVICE" onclick="setEntityFilter('DEVICE')">
-          <span class="chip-dot" style="background:#8da1b8"></span> Devices & IPs <span class="chip-count" id="count-DEVICE">0</span>
+          <span class="chip-dot" style="background:#8da1b8"></span> Devices <span class="chip-count" id="count-DEVICE">0</span>
+        </div>
+        <div class="chip" data-filter="IP_ADDRESS" onclick="setEntityFilter('IP_ADDRESS')">
+          <span class="chip-dot" style="background:#ff4d4f"></span> Attacker IPs <span class="chip-count" id="count-IP_ADDRESS">0</span>
         </div>
         <div class="chip" data-filter="high_risk" onclick="setEntityFilter('high_risk')">
           <span class="chip-dot" style="background:#ff5d7d"></span> High Risk (≥70) <span class="chip-count" id="count-high_risk">0</span>
@@ -1047,6 +1051,9 @@
               <a href="#" id="btnViewTx" class="action-btn secondary" style="display:none;">
                 💳 View in Transactions
               </a>
+              <a href="#" id="btnViewMap" class="action-btn secondary" style="display:none; border-color:rgba(255,77,79,0.4); color:#ff7875;">
+                🗺️ Locate on Threat Map
+              </a>
             </div>
 
             <!-- Path helpers -->
@@ -1171,28 +1178,33 @@ let sharedInfraData = [];
 let circularFlowsData = [];
 let animationInterval = null;
 
-// Built-in Operation Phantom KYC fallback dataset
+// Built-in Operation Phantom KYC fallback dataset with authentic Indian attacker infrastructure
 const FALLBACK_GRAPH = {
   nodes: [
     { id: "e-35", numeric_id: 35, label: "CS-1024", entity_type: "CASE", risk_score: 82.0, metadata: { title: "Simulated KYC Suspension Alert" } },
     { id: "e-36", numeric_id: 36, label: "CS-1027", entity_type: "CASE", risk_score: 85.0, metadata: { title: "KYC Phishing Cluster" } },
     { id: "e-37", numeric_id: 37, label: "CS-1019", entity_type: "CASE", risk_score: 72.0, metadata: { title: "Mule Account Funnel" } },
-    { id: "e-1", numeric_id: 1, label: "secure-kyc-update.com", entity_type: "DOMAIN", risk_score: 88.0, metadata: { registrar: "Simulated Registrar", tld: ".com" } },
-    { id: "e-2", numeric_id: 2, label: "verify-portal-in.net", entity_type: "DOMAIN", risk_score: 85.0, metadata: { registrar: "Simulated Registrar", tld: ".net" } },
-    { id: "e-4", numeric_id: 4, label: "+91 96865 79303", entity_type: "PHONE", risk_score: 85.0, metadata: { provider: "Simulated Telecom" } },
-    { id: "e-5", numeric_id: 5, label: "+91 98220 19482", entity_type: "PHONE", risk_score: 80.0, metadata: { provider: "Simulated Telecom" } },
-    { id: "e-7", numeric_id: 7, label: "centralmule99@okaxis", entity_type: "UPI_ID", risk_score: 90.0, metadata: { bank: "Axis Simulation" } },
-    { id: "e-8", numeric_id: 8, label: "quickrefund@paytm", entity_type: "UPI_ID", risk_score: 75.0, metadata: { bank: "Paytm Simulation" } },
+    { id: "e-1", numeric_id: 1, label: "secure-kyc-update.com", entity_type: "DOMAIN", risk_score: 88.0, metadata: { registrar: "Simulated Registrar", tld: ".com", category: "Phishing" } },
+    { id: "e-2", numeric_id: 2, label: "verify-portal-in.net", entity_type: "DOMAIN", risk_score: 85.0, metadata: { registrar: "Simulated Registrar", tld: ".net", category: "Phishing" } },
+    { id: "e-4", numeric_id: 4, label: "+91 96865 79303", entity_type: "PHONE", risk_score: 85.0, metadata: { provider: "Airtel SIM Box Relay", circle: "Haryana" } },
+    { id: "e-5", numeric_id: 5, label: "+91 98220 19482", entity_type: "PHONE", risk_score: 80.0, metadata: { provider: "Vodafone Spoofed" } },
+    { id: "e-7", numeric_id: 7, label: "centralmule99@okaxis", entity_type: "UPI_ID", risk_score: 90.0, metadata: { bank: "Axis Bank Simulation", role: "Primary Collection VPA" } },
+    { id: "e-8", numeric_id: 8, label: "quickrefund@paytm", entity_type: "UPI_ID", risk_score: 75.0, metadata: { bank: "Paytm Simulation", role: "Layering VPA" } },
+    { id: "e-9", numeric_id: 9, label: "DEV-SIM-1000", entity_type: "DEVICE", risk_score: 88.0, metadata: { model: "Android SIM Box", role: "Attacker Hardware" } },
+    { id: "e-15", numeric_id: 15, label: "SIM-ACC-MULE-HUB-891", entity_type: "BANK_ACCOUNT", risk_score: 94.0, metadata: { bank: "HDFC Bank Simulation", role: "Mule Funnel Hub" } },
     { id: "e-10", numeric_id: 10, label: "SIM-ACC-CIRCULAR-A", entity_type: "BANK_ACCOUNT", risk_score: 92.0, metadata: { bank: "HDFC Simulation" } },
     { id: "e-11", numeric_id: 11, label: "SIM-ACC-CIRCULAR-B", entity_type: "BANK_ACCOUNT", risk_score: 92.0, metadata: { bank: "ICICI Simulation" } },
     { id: "e-12", numeric_id: 12, label: "SIM-ACC-CIRCULAR-C", entity_type: "BANK_ACCOUNT", risk_score: 92.0, metadata: { bank: "SBI Simulation" } },
-    { id: "e-41", numeric_id: 41, label: "185.220.101.5", entity_type: "IP_ADDRESS", risk_score: 78.0, metadata: { country: "IN", isp: "Cloud Proxy" } }
+    { id: "e-100", numeric_id: 10, label: "198.51.100.10", entity_type: "IP_ADDRESS", risk_score: 98.5, metadata: { role: "ATTACKER_INFRASTRUCTURE", city: "Jamtara", state: "Jharkhand", pincode: "815351", asn: "AS133982 Bharti Airtel", isp: "Bharti Airtel Broadband", attack_type: "PHISHING_HOST", campaign: "Operation Phantom KYC" } },
+    { id: "e-123", numeric_id: 123, label: "103.242.116.14", entity_type: "IP_ADDRESS", risk_score: 91.5, metadata: { role: "ATTACKER_INFRASTRUCTURE", city: "Bharatpur", state: "Rajasthan", pincode: "321001", asn: "AS45609 Vodafone Idea", attack_type: "UPI_MULE_VECTOR", campaign: "Operation Phantom KYC" } },
+    { id: "e-124", numeric_id: 124, label: "122.161.49.202", entity_type: "IP_ADDRESS", risk_score: 95.0, metadata: { role: "ATTACKER_INFRASTRUCTURE", city: "Gurugram", state: "Haryana", pincode: "122001", asn: "AS133982 Bharti Airtel", attack_type: "MALWARE_C2", campaign: "Operation Phantom KYC" } },
+    { id: "e-126", numeric_id: 126, label: "115.110.201.78", entity_type: "IP_ADDRESS", risk_score: 84.5, metadata: { role: "ATTACKER_INFRASTRUCTURE", city: "Surat", state: "Gujarat", pincode: "395003", asn: "AS17488 Hathway Broadband", attack_type: "UPI_MULE_VECTOR", campaign: "Operation Phantom KYC" } }
   ],
   edges: [
     { id: "r-1", source: "e-4", target: "e-35", relationship_type: "USED_IN_INCIDENT", amount: 0 },
     { id: "r-2", source: "e-35", target: "e-1", relationship_type: "HOSTED_PHISHING_URL", amount: 0 },
     { id: "r-3", source: "e-1", target: "e-7", relationship_type: "REQUESTS_PAYMENT_TO", amount: 0 },
-    { id: "r-4", source: "e-7", target: "e-10", relationship_type: "SETTLED_TO", amount: 48500 },
+    { id: "r-4", source: "e-7", target: "e-15", relationship_type: "SETTLED_TO", amount: 48500 },
     { id: "r-5", source: "e-10", target: "e-11", relationship_type: "TRANSFERRED_TO", amount: 35000 },
     { id: "r-6", source: "e-11", target: "e-12", relationship_type: "TRANSFERRED_TO", amount: 32000 },
     { id: "r-7", source: "e-12", target: "e-10", relationship_type: "TRANSFERRED_TO", amount: 30000 },
@@ -1200,7 +1212,18 @@ const FALLBACK_GRAPH = {
     { id: "r-9", source: "e-1", target: "e-36", relationship_type: "SHARED_INFRASTRUCTURE", amount: 0 },
     { id: "r-10", source: "e-2", target: "e-37", relationship_type: "HOSTED_PHISHING_URL", amount: 0 },
     { id: "r-11", source: "e-2", target: "e-7", relationship_type: "REQUESTS_PAYMENT_TO", amount: 0 },
-    { id: "r-12", source: "e-41", target: "e-1", relationship_type: "RESOLVES_TO", amount: 0 }
+    // Attacker IP Multi-hop Infrastructure Connections
+    { id: "r-12", source: "e-1", target: "e-100", relationship_type: "RESOLVES_TO", amount: 0 },
+    { id: "r-13", source: "e-9", target: "e-100", relationship_type: "ROUTED_THROUGH", amount: 0 },
+    { id: "r-14", source: "e-7", target: "e-100", relationship_type: "ACCESSED_FROM", amount: 0 },
+    { id: "r-15", source: "e-15", target: "e-100", relationship_type: "ACCESSED_FROM", amount: 0 },
+    { id: "r-16", source: "e-100", target: "e-35", relationship_type: "REPORTED_IN", amount: 0 },
+    { id: "r-17", source: "e-100", target: "e-36", relationship_type: "REPORTED_IN", amount: 0 },
+    { id: "r-18", source: "e-8", target: "e-123", relationship_type: "ACCESSED_FROM", amount: 0 },
+    { id: "r-19", source: "e-123", target: "e-35", relationship_type: "REPORTED_IN", amount: 0 },
+    { id: "r-20", source: "e-10", target: "e-124", relationship_type: "ACCESSED_FROM", amount: 0 },
+    { id: "r-21", source: "e-12", target: "e-126", relationship_type: "ACCESSED_FROM", amount: 0 },
+    { id: "r-22", source: "e-126", target: "e-35", relationship_type: "REPORTED_IN", amount: 0 }
   ]
 };
 
@@ -1338,9 +1361,9 @@ function initCytoscape() {
           'height': 36
         }
       },
-      // DEVICE & IP_ADDRESS Node
+      // DEVICE Node
       {
-        selector: 'node[entity_type = "DEVICE"], node[entity_type = "IP_ADDRESS"]',
+        selector: 'node[entity_type = "DEVICE"]',
         style: {
           'shape': 'pentagon',
           'border-color': '#8da1b8',
@@ -1349,6 +1372,19 @@ function initCytoscape() {
           'border-width': 2.5,
           'width': 42,
           'height': 42
+        }
+      },
+      // ATTACKER IP_ADDRESS Node
+      {
+        selector: 'node[entity_type = "IP_ADDRESS"]',
+        style: {
+          'shape': 'octagon',
+          'border-color': '#ff4d4f',
+          'background-color': '#280c10',
+          'color': '#ffb3b3',
+          'border-width': 3,
+          'width': 44,
+          'height': 44
         }
       },
       // PERSON Node
@@ -1655,6 +1691,7 @@ function updateEntityFilterCounts(nodes) {
     UPI_ID: 0,
     BANK_ACCOUNT: 0,
     DEVICE: 0,
+    IP_ADDRESS: 0,
     high_risk: 0
   };
 
@@ -1665,7 +1702,8 @@ function updateEntityFilterCounts(nodes) {
     else if (t === 'PHONE') counts.PHONE++;
     else if (t === 'UPI_ID') counts.UPI_ID++;
     else if (t === 'BANK_ACCOUNT') counts.BANK_ACCOUNT++;
-    else if (t === 'DEVICE' || t === 'IP_ADDRESS') counts.DEVICE++;
+    else if (t === 'IP_ADDRESS') counts.IP_ADDRESS++;
+    else if (t === 'DEVICE') counts.DEVICE++;
 
     if (n.data.risk_score >= 70) counts.high_risk++;
   });
@@ -1835,7 +1873,6 @@ function setEntityFilter(type) {
       const et = n.data('entity_type');
       let match = (et === type);
       if (type === 'DOMAIN' && et === 'URL') match = true;
-      if (type === 'DEVICE' && et === 'IP_ADDRESS') match = true;
       if (match) n.show();
       else n.hide();
     });
@@ -2040,6 +2077,16 @@ function inspectNode(node) {
       btnViewTx.href = `transaction-explorer.html?search=${encodeURIComponent(d.label)}`;
     } else {
       btnViewTx.style.display = 'none';
+    }
+
+    const btnViewMap = document.getElementById('btnViewMap');
+    if (d.entity_type === 'IP_ADDRESS') {
+      if (btnViewMap) {
+        btnViewMap.style.display = 'inline-flex';
+        btnViewMap.href = `threat-map.html?search=${encodeURIComponent(d.label)}`;
+      }
+    } else if (btnViewMap) {
+      btnViewMap.style.display = 'none';
     }
   }
 }
@@ -2659,6 +2706,7 @@ async function processUrlParameters() {
   const caseIdParam = params.get('case_id');
   const caseNumParam = params.get('case_number');
   const entityIdParam = params.get('entity_id');
+  const entityParam = params.get('entity') || params.get('ip') || entityIdParam;
   const searchParam = params.get('search');
 
   // Load cases dropdown first
@@ -2675,15 +2723,29 @@ async function processUrlParameters() {
     } else {
       await loadFullGraph();
     }
-  } else if (entityIdParam) {
-    // 2. Entity ID -> expand entity neighborhood
-    showLoading(`Loading Neighborhood for Entity #${entityIdParam}...`);
+  } else if (entityParam) {
+    // 2. Entity ID / IP -> expand entity neighborhood
+    showLoading(`Loading Neighborhood for ${entityParam}...`);
     try {
-      const res = await fetch(getApiEndpoint(`/api/graph/entity/${entityIdParam}?hops=2`));
+      const res = await fetch(getApiEndpoint(`/api/graph/entity/${encodeURIComponent(entityParam)}?hops=2`));
       if (res.ok) {
         const data = await res.json();
         renderGraphElements(data);
-        document.getElementById('hudScope').textContent = `Entity #${entityIdParam} Neighborhood`;
+        document.getElementById('hudScope').textContent = `${entityParam} Neighborhood`;
+        setTimeout(() => {
+          const target = cy.nodes().filter(n => 
+            n.data('label') === entityParam || 
+            n.data('normalized_value') === entityParam || 
+            n.data('numeric_id') == entityParam || 
+            n.data('id') === entityParam
+          );
+          if (target.length) {
+            target[0].select();
+            inspectNode(target[0]);
+            highlightNeighborhood(target[0]);
+            cy.animate({ center: { eles: target[0] }, zoom: 1.35, duration: 400 });
+          }
+        }, 350);
       } else {
         await loadFullGraph();
       }

@@ -9,6 +9,8 @@ from app.models.campaign import Campaign
 from app.models.investigation import InvestigationLog
 from app.models.user import User, UserVerification
 
+from app.models.threat_node import ThreatNode
+
 __all__ = [
     "Base",
     "TimestampMixin",
@@ -22,4 +24,5 @@ __all__ = [
     "InvestigationLog",
     "User",
     "UserVerification",
+    "ThreatNode",
 ]

@@ -26,6 +26,7 @@
       <a href="dashboard.html">Dashboard</a>
       <a href="cases.html">Cases</a>
       <a href="fraud-graph.html">Fraud Graph</a>
+      <a href="threat-map.html">Threat Map</a>
       <a href="entity-explorer.html">Entities</a>
       <a href="transaction-explorer.html">Transactions</a>
       <a href="campaign-explorer.html">Campaigns</a>
@@ -50,7 +51,10 @@
     </div>
     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
       <div class="status"><span class="dot-pulse">●</span> SYSTEM OPERATIONAL</div>
-      <a href="fraud-graph.html" class="btn" style="padding:6px 12px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:rgba(54,207,255,0.08); border-color:var(--cyan); color:var(--cyan);">◎ Open Fraud Graph →</a>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        <a href="threat-map.html" class="btn" style="padding:6px 12px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:rgba(255,93,125,0.1); border-color:var(--danger,#ff5d7d); color:var(--danger,#ff5d7d);">🗺️ Live Threat Map →</a>
+        <a href="fraud-graph.html" class="btn" style="padding:6px 12px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:rgba(54,207,255,0.08); border-color:var(--cyan); color:var(--cyan);">◎ Open Fraud Graph →</a>
+      </div>
     </div>
   </section>
 
@@ -121,6 +125,7 @@
   <section class="quick">
     <a href="cases.html">▣ &nbsp; Open Case Management →</a>
     <a href="fraud-graph.html">◎ &nbsp; Explore Fraud Graph →</a>
+    <a href="threat-map.html">🗺️ &nbsp; Indian Threat Map →</a>
     <a href="investigation-workspace.html">⌁ &nbsp; Investigation Workspace →</a>
   </section>
 </main>
@@ -183,6 +188,11 @@ function dashboardLoadUser(){
   if(window.CyberScopeAuth && typeof window.CyberScopeAuth.verifySession === 'function'){
     window.CyberScopeAuth.verifySession().then(function(valid){
       if(!valid){
+        var localUser = cyberscopeUser();
+        var localSession = localStorage.getItem('cyberscopeSession');
+        if (localSession === 'active' && localUser && (localUser.email || localUser.id)) {
+          return;
+        }
         var gate = document.getElementById('authGate');
         if(gate){
           gate.classList.add('active');

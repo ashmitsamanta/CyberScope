@@ -13,6 +13,7 @@
       <a href="dashboard.html">Dashboard</a>
       <a href="cases.html">Cases</a>
       <a href="fraud-graph.html">Fraud Graph</a>
+      <a href="threat-map.html">Threat Map</a>
       <a href="entity-explorer.html">Entities</a>
       <a href="transaction-explorer.html">Transactions</a>
       <a href="campaign-explorer.html">Campaigns</a>
@@ -194,6 +195,33 @@ async function loadCaseDetail(){
     ? window.CyberScopeAuth.getAuthHeaders()
     : {};
 
+  const FALLBACK_CASES = {
+    '1': { case_number: 'CS-1024', title: 'Simulated KYC Suspension Alert - Victim Rajiv', risk_score: 84, entity_count: 5, connected_paths: 3 },
+    '2': { case_number: 'CS-1025', title: 'Simulated KYC Suspension Alert - Victim Meera', risk_score: 88, entity_count: 6, connected_paths: 4 },
+    '3': { case_number: 'CS-1026', title: 'Simulated KYC Suspension Alert - Victim Anand', risk_score: 79, entity_count: 4, connected_paths: 2 },
+    '4': { case_number: 'CS-1027', title: 'Simulated KYC Suspension Alert - Victim Sunita', risk_score: 82, entity_count: 5, connected_paths: 3 },
+    '5': { case_number: 'CS-1028', title: 'Simulated KYC Suspension Alert - Victim Kavita', risk_score: 91, entity_count: 7, connected_paths: 4 },
+    '6': { case_number: 'CS-1029', title: 'Corporate Executive ATO & Rapid Wire Siphon', risk_score: 95, entity_count: 8, connected_paths: 5 },
+    '7': { case_number: 'CS-1030', title: 'Electricity Disconnection Phishing - Cluster Case A', risk_score: 89, entity_count: 6, connected_paths: 3 },
+    '8': { case_number: 'CS-1031', title: 'Electricity Disconnection Phishing - Cluster Case B', risk_score: 85, entity_count: 5, connected_paths: 3 },
+    '9': { case_number: 'CS-1032', title: 'Detained Consignment Duty Scam - Case Alpha', risk_score: 76, entity_count: 4, connected_paths: 2 },
+    '10': { case_number: 'CS-1033', title: 'Fastag Recharge Skimmer Syndicate Alert', risk_score: 92, entity_count: 5, connected_paths: 3 },
+    '11': { case_number: 'CS-1034', title: 'Instant Loan APK Extortion Ring Case', risk_score: 94, entity_count: 6, connected_paths: 4 },
+    '12': { case_number: 'CS-1035', title: 'PM-Kisan Impersonation Scheme Investigation', risk_score: 88, entity_count: 5, connected_paths: 3 },
+    'CS-1024': { case_number: 'CS-1024', title: 'Simulated KYC Suspension Alert - Victim Rajiv', risk_score: 84, entity_count: 5, connected_paths: 3 },
+    'CS-1025': { case_number: 'CS-1025', title: 'Simulated KYC Suspension Alert - Victim Meera', risk_score: 88, entity_count: 6, connected_paths: 4 },
+    'CS-1026': { case_number: 'CS-1026', title: 'Simulated KYC Suspension Alert - Victim Anand', risk_score: 79, entity_count: 4, connected_paths: 2 },
+    'CS-1027': { case_number: 'CS-1027', title: 'Simulated KYC Suspension Alert - Victim Sunita', risk_score: 82, entity_count: 5, connected_paths: 3 },
+    'CS-1028': { case_number: 'CS-1028', title: 'Simulated KYC Suspension Alert - Victim Kavita', risk_score: 91, entity_count: 7, connected_paths: 4 },
+    'CS-1029': { case_number: 'CS-1029', title: 'Corporate Executive ATO & Rapid Wire Siphon', risk_score: 95, entity_count: 8, connected_paths: 5 },
+    'CS-1030': { case_number: 'CS-1030', title: 'Electricity Disconnection Phishing - Cluster Case A', risk_score: 89, entity_count: 6, connected_paths: 3 },
+    'CS-1031': { case_number: 'CS-1031', title: 'Electricity Disconnection Phishing - Cluster Case B', risk_score: 85, entity_count: 5, connected_paths: 3 },
+    'CS-1032': { case_number: 'CS-1032', title: 'Detained Consignment Duty Scam - Case Alpha', risk_score: 76, entity_count: 4, connected_paths: 2 },
+    'CS-1033': { case_number: 'CS-1033', title: 'Fastag Recharge Skimmer Syndicate Alert', risk_score: 92, entity_count: 5, connected_paths: 3 },
+    'CS-1034': { case_number: 'CS-1034', title: 'Instant Loan APK Extortion Ring Case', risk_score: 94, entity_count: 6, connected_paths: 4 },
+    'CS-1035': { case_number: 'CS-1035', title: 'PM-Kisan Impersonation Scheme Investigation', risk_score: 88, entity_count: 5, connected_paths: 3 },
+  };
+
   try {
     var res = await fetch('/api/cases/' + encodeURIComponent(caseId), { headers: authHeaders });
     if(res.ok){
@@ -202,8 +230,22 @@ async function loadCaseDetail(){
       if(d.risk_score !== undefined) document.getElementById('wsRiskScore').textContent = Math.round(d.risk_score);
       if(d.entity_count !== undefined) document.getElementById('wsEntityCount').textContent = d.entity_count;
       if(d.connected_paths !== undefined) document.getElementById('wsPathCount').textContent = Array.isArray(d.connected_paths) ? d.connected_paths.length : d.connected_paths;
+    } else if (FALLBACK_CASES[caseId]) {
+      var fb = FALLBACK_CASES[caseId];
+      document.getElementById('wsCaseTitle').textContent = fb.case_number + ' · ' + fb.title;
+      document.getElementById('wsRiskScore').textContent = fb.risk_score;
+      document.getElementById('wsEntityCount').textContent = fb.entity_count;
+      document.getElementById('wsPathCount').textContent = fb.connected_paths;
     }
-  } catch(e) {}
+  } catch(e) {
+    if (FALLBACK_CASES[caseId]) {
+      var fb = FALLBACK_CASES[caseId];
+      document.getElementById('wsCaseTitle').textContent = fb.case_number + ' · ' + fb.title;
+      document.getElementById('wsRiskScore').textContent = fb.risk_score;
+      document.getElementById('wsEntityCount').textContent = fb.entity_count;
+      document.getElementById('wsPathCount').textContent = fb.connected_paths;
+    }
+  }
 
   // Load linked entities for this case from graph API
   try {
