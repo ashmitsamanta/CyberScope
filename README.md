@@ -384,6 +384,22 @@ docker compose up --build
 
 ---
 
+### E. Cloud Deployment (Frontend on Vercel + Backend on Render)
+
+* **Frontend:** Deploy to Vercel with root set to `Frontend`. Set `VITE_API_URL` to your Render backend URL (e.g. `https://your-backend.onrender.com`).
+* **Backend:** Deploy to Render as a Web Service from the `Backend` directory (Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
+* **Email Verification on Render (Port 443 HTTPS):**
+  > ⚠️ **Important:** Render's free web services block outbound SMTP (ports 25, 465, and 587). Standard SMTP connections to Gmail or Outlook will time out.
+  >
+  > **Solution:** Configure an HTTPS Email API in your Render Environment Variables:
+  > - **Resend (Recommended):** Set `RESEND_API_KEY=re_...` (free 3,000 emails/mo at [resend.com](https://resend.com)).
+  > - **Brevo:** Set `BREVO_API_KEY=xkeysib-...` and `EMAIL_FROM_EMAIL=your-email@gmail.com` (free 300 emails/day at [brevo.com](https://brevo.com); supports verified personal Gmail senders).
+  > - **SendGrid:** Set `SENDGRID_API_KEY=SG...`.
+  >
+  > *During development/testing on Render, all generated 6-digit OTP verification codes are also printed with high visibility in Render's live server logs.*
+
+---
+
 ## 9. Demo Scenario: "Operation Phantom KYC"
 
 CYBERSCOPE includes a pre-seeded, deterministic investigative scenario called **"Operation Phantom KYC"**:

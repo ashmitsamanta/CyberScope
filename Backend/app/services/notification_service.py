@@ -37,7 +37,8 @@ def _is_test_mode() -> bool:
 class EmailDispatcher:
     """
     Handles cryptographic dispatch of verification codes and forensic notifications
-    via enterprise SMTP with fallback to an in-memory testing outbox.
+    via HTTPS Email APIs (Resend, Brevo, SendGrid, Mailgun, Webhook) and enterprise SMTP,
+    with fallback to an in-memory testing outbox.
     """
 
     def __init__(self):
@@ -185,63 +186,315 @@ https://cyberscope.io
 =======================================================
 """
 
-    def send_verification_email(self, to_email: str, recipient_name: str, code: str) -> Dict[str, Any]:
+    def _detect_provider(self) -> str:
         """
-        Constructs and dispatches a verification email.
-        Uses SMTP when configured; otherwise cleanly logs and stores in the test outbox.
+        Determines the effective email provider based on configuration.
+        Auto-detection prioritizes HTTPS Email APIs over port 443 (ideal for Render/Vercel)
+        before falling back to legacy SMTP.
         """
-        to_email = to_email.strip().lower()
-        subject = f"CyberScope Verification Code: {code}"
+        explicit = (getattr(settings, "EMAIL_PROVIDER", "") or "auto").strip().lower()
+        if explicit and explicit != "auto":
+            return explicit
 
-        # Build multipart message
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        sender_header = (
-            f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-            if settings.SMTP_FROM_NAME
-            else settings.SMTP_FROM_EMAIL
-        )
-        msg["From"] = sender_header
-        msg["To"] = to_email
+        if getattr(settings, "RESEND_API_KEY", "").strip():
+            return "resend"
+        if getattr(settings, "BREVO_API_KEY", "").strip() or os.environ.get("SENDINBLUE_API_KEY", "").strip():
+            return "brevo"
+        if getattr(settings, "SENDGRID_API_KEY", "").strip():
+            return "sendgrid"
+        if getattr(settings, "MAILGUN_API_KEY", "").strip() and getattr(settings, "MAILGUN_DOMAIN", "").strip():
+            return "mailgun"
+        if getattr(settings, "EMAIL_WEBHOOK_URL", "").strip():
+            return "webhook"
+        if getattr(settings, "SMTP_HOST", "").strip() and getattr(settings, "SMTP_USER", "").strip() and getattr(settings, "SMTP_PASSWORD", "").strip():
+            return "smtp"
+        return "unconfigured"
 
-        plain_text = self._build_plain_text(recipient_name, code)
-        html_content = self._build_html_template(recipient_name, code)
+    def _get_from_identity(self, provider: str) -> tuple:
+        """
+        Extracts display name and from-email address tailored for the given provider.
+        """
+        from_name = (
+            getattr(settings, "EMAIL_FROM_NAME", "")
+            or getattr(settings, "SMTP_FROM_NAME", "")
+            or "CyberScope Security"
+        ).strip()
+        from_email = (
+            getattr(settings, "EMAIL_FROM_EMAIL", "")
+            or getattr(settings, "SMTP_FROM_EMAIL", "")
+            or getattr(settings, "SMTP_USER", "")
+            or "security@cyberscope.io"
+        ).strip()
 
-        msg.attach(MIMEText(plain_text, "plain", "utf-8"))
-        msg.attach(MIMEText(html_content, "html", "utf-8"))
+        if provider == "resend":
+            resend_from = getattr(settings, "RESEND_FROM_EMAIL", "").strip()
+            if resend_from:
+                from_email = resend_from
+            elif not from_email or from_email.lower().endswith("@gmail.com") or from_email.lower().endswith("@yahoo.com") or from_email.lower() in ("security@cyberscope.io", "noreply@cyberscope.io"):
+                # Resend testing sandbox requires onboarding@resend.dev unless a custom domain is verified
+                from_email = "onboarding@resend.dev"
 
-        # Check if automated test mode (unless explicitly forced via _FORCE_LIVE_SMTP)
-        is_test = _is_test_mode() and not getattr(settings, "_FORCE_LIVE_SMTP", False)
-        if is_test:
-            record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "to_email": to_email,
-                "recipient_name": recipient_name,
-                "code": code,
-                "subject": subject,
-                "plain_text": plain_text,
-                "html_content": html_content
-            }
-            self.dispatched_emails.append(record)
-            logger.info(f"[EmailDispatcher:mock] Verification email recorded in test outbox for {to_email}")
+        return from_name, from_email
+
+    def _dispatch_resend(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
+        api_key = getattr(settings, "RESEND_API_KEY", "").strip()
+        if not api_key:
+            return {"success": False, "provider": "resend", "message": "RESEND_API_KEY is not configured in environment."}
+
+        from_name, from_email = self._get_from_identity("resend")
+        from_header = f"{from_name} <{from_email}>" if from_name else from_email
+        payload = {
+            "from": from_header,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content,
+            "text": plain_text,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        timeout = float(getattr(settings, "EMAIL_HTTP_TIMEOUT_SECONDS", 10.0))
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post("https://api.resend.com/emails", headers=headers, json=payload)
+                if resp.status_code in (200, 201):
+                    msg_id = resp.json().get("id", "")
+                    logger.info(f"[EmailDispatcher:Resend] Verification email dispatched to {to_email} (ID: {msg_id})")
+                    return {
+                        "success": True,
+                        "provider": "resend",
+                        "message": f"Verification email dispatched via Resend to {to_email}."
+                    }
+                err_text = resp.text
+                try:
+                    err_json = resp.json()
+                    err_text = err_json.get("message", resp.text)
+                except Exception:
+                    pass
+                logger.error(f"[EmailDispatcher:Resend] HTTP {resp.status_code}: {err_text}")
+                return {
+                    "success": False,
+                    "provider": "resend",
+                    "message": f"Resend delivery failed (HTTP {resp.status_code}): {err_text}"
+                }
+        except Exception as exc:
+            logger.error(f"[EmailDispatcher:Resend] Exception: {exc}")
             return {
-                "success": True,
-                "provider": "mock",
-                "message": f"Verification email recorded in test outbox for {to_email}."
+                "success": False,
+                "provider": "resend",
+                "message": f"Resend request error: {str(exc)}"
             }
 
-        # If not in test mode, check if SMTP credentials are configured
+    def _dispatch_brevo(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
+        api_key = (getattr(settings, "BREVO_API_KEY", "") or os.environ.get("SENDINBLUE_API_KEY", "")).strip()
+        if not api_key:
+            return {"success": False, "provider": "brevo", "message": "BREVO_API_KEY is not configured in environment."}
+
+        from_name, from_email = self._get_from_identity("brevo")
+        payload = {
+            "sender": {"name": from_name, "email": from_email},
+            "to": [{"email": to_email, "name": recipient_name or "Investigator"}],
+            "subject": subject,
+            "htmlContent": html_content,
+            "textContent": plain_text,
+        }
+        headers = {
+            "api-key": api_key,
+            "Content-Type": "application/json",
+            "accept": "application/json"
+        }
+        timeout = float(getattr(settings, "EMAIL_HTTP_TIMEOUT_SECONDS", 10.0))
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post("https://api.brevo.com/v3/smtp/email", headers=headers, json=payload)
+                if resp.status_code in (200, 201, 202):
+                    msg_id = resp.json().get("messageId", "")
+                    logger.info(f"[EmailDispatcher:Brevo] Verification email dispatched to {to_email} (ID: {msg_id})")
+                    return {
+                        "success": True,
+                        "provider": "brevo",
+                        "message": f"Verification email dispatched via Brevo to {to_email}."
+                    }
+                err_text = resp.text
+                try:
+                    err_json = resp.json()
+                    err_text = err_json.get("message", resp.text)
+                except Exception:
+                    pass
+                logger.error(f"[EmailDispatcher:Brevo] HTTP {resp.status_code}: {err_text}")
+                return {
+                    "success": False,
+                    "provider": "brevo",
+                    "message": f"Brevo delivery failed (HTTP {resp.status_code}): {err_text}"
+                }
+        except Exception as exc:
+            logger.error(f"[EmailDispatcher:Brevo] Exception: {exc}")
+            return {
+                "success": False,
+                "provider": "brevo",
+                "message": f"Brevo request error: {str(exc)}"
+            }
+
+    def _dispatch_sendgrid(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
+        api_key = getattr(settings, "SENDGRID_API_KEY", "").strip()
+        if not api_key:
+            return {"success": False, "provider": "sendgrid", "message": "SENDGRID_API_KEY is not configured in environment."}
+
+        from_name, from_email = self._get_from_identity("sendgrid")
+        payload = {
+            "personalizations": [{"to": [{"email": to_email, "name": recipient_name or "Investigator"}]}],
+            "from": {"email": from_email, "name": from_name},
+            "subject": subject,
+            "content": [
+                {"type": "text/plain", "value": plain_text},
+                {"type": "text/html", "value": html_content}
+            ]
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        timeout = float(getattr(settings, "EMAIL_HTTP_TIMEOUT_SECONDS", 10.0))
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post("https://api.sendgrid.com/v3/mail/send", headers=headers, json=payload)
+                if resp.status_code in (200, 201, 202):
+                    logger.info(f"[EmailDispatcher:SendGrid] Verification email dispatched to {to_email}")
+                    return {
+                        "success": True,
+                        "provider": "sendgrid",
+                        "message": f"Verification email dispatched via SendGrid to {to_email}."
+                    }
+                err_text = resp.text
+                try:
+                    err_json = resp.json()
+                    errs = err_json.get("errors", [])
+                    if errs and isinstance(errs, list):
+                        err_text = errs[0].get("message", resp.text)
+                except Exception:
+                    pass
+                logger.error(f"[EmailDispatcher:SendGrid] HTTP {resp.status_code}: {err_text}")
+                return {
+                    "success": False,
+                    "provider": "sendgrid",
+                    "message": f"SendGrid delivery failed (HTTP {resp.status_code}): {err_text}"
+                }
+        except Exception as exc:
+            logger.error(f"[EmailDispatcher:SendGrid] Exception: {exc}")
+            return {
+                "success": False,
+                "provider": "sendgrid",
+                "message": f"SendGrid request error: {str(exc)}"
+            }
+
+    def _dispatch_mailgun(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
+        api_key = getattr(settings, "MAILGUN_API_KEY", "").strip()
+        domain = getattr(settings, "MAILGUN_DOMAIN", "").strip()
+        if not (api_key and domain):
+            return {"success": False, "provider": "mailgun", "message": "MAILGUN_API_KEY and MAILGUN_DOMAIN are required."}
+
+        from_name, from_email = self._get_from_identity("mailgun")
+        from_header = f"{from_name} <{from_email}>" if from_name else from_email
+        data = {
+            "from": from_header,
+            "to": [to_email],
+            "subject": subject,
+            "text": plain_text,
+            "html": html_content
+        }
+        timeout = float(getattr(settings, "EMAIL_HTTP_TIMEOUT_SECONDS", 10.0))
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post(
+                    f"https://api.mailgun.net/v3/{domain}/messages",
+                    auth=("api", api_key),
+                    data=data
+                )
+                if resp.status_code == 200:
+                    logger.info(f"[EmailDispatcher:Mailgun] Verification email dispatched to {to_email}")
+                    return {
+                        "success": True,
+                        "provider": "mailgun",
+                        "message": f"Verification email dispatched via Mailgun to {to_email}."
+                    }
+                logger.error(f"[EmailDispatcher:Mailgun] HTTP {resp.status_code}: {resp.text}")
+                return {
+                    "success": False,
+                    "provider": "mailgun",
+                    "message": f"Mailgun delivery failed (HTTP {resp.status_code}): {resp.text}"
+                }
+        except Exception as exc:
+            logger.error(f"[EmailDispatcher:Mailgun] Exception: {exc}")
+            return {
+                "success": False,
+                "provider": "mailgun",
+                "message": f"Mailgun request error: {str(exc)}"
+            }
+
+    def _dispatch_webhook(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
+        url = getattr(settings, "EMAIL_WEBHOOK_URL", "").strip()
+        if not url:
+            return {"success": False, "provider": "webhook", "message": "EMAIL_WEBHOOK_URL is not configured."}
+
+        payload = {
+            "to": to_email,
+            "recipient_name": recipient_name,
+            "code": code,
+            "subject": subject,
+            "text": plain_text,
+            "html": html_content
+        }
+        timeout = float(getattr(settings, "EMAIL_HTTP_TIMEOUT_SECONDS", 10.0))
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                resp = client.post(url, json=payload)
+                if resp.status_code in (200, 201, 202, 204):
+                    logger.info(f"[EmailDispatcher:Webhook] Verification payload dispatched to {url}")
+                    return {
+                        "success": True,
+                        "provider": "webhook",
+                        "message": f"Verification email payload dispatched via Webhook to {to_email}."
+                    }
+                logger.error(f"[EmailDispatcher:Webhook] HTTP {resp.status_code}: {resp.text}")
+                return {
+                    "success": False,
+                    "provider": "webhook",
+                    "message": f"Webhook delivery failed (HTTP {resp.status_code}): {resp.text}"
+                }
+        except Exception as exc:
+            logger.error(f"[EmailDispatcher:Webhook] Exception: {exc}")
+            return {
+                "success": False,
+                "provider": "webhook",
+                "message": f"Webhook request error: {str(exc)}"
+            }
+
+    def _dispatch_smtp(self, to_email: str, recipient_name: str, subject: str, html_content: str, plain_text: str, code: str) -> Dict[str, Any]:
         if not (settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD):
             logger.warning(f"[EmailDispatcher:unconfigured] SMTP is not configured in .env. Email to {to_email} could not be sent.")
             return {
                 "success": False,
                 "provider": "unconfigured_smtp",
-                "message": "SMTP credentials not configured in .env. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASSWORD."
+                "message": (
+                    "SMTP credentials not configured in .env. "
+                    "Note: Render free tier blocks outbound SMTP ports 25, 465, and 587. "
+                    "Use an HTTPS email API (e.g. RESEND_API_KEY or BREVO_API_KEY) to send via port 443."
+                )
             }
 
-        # Real SMTP Dispatch
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        from_name, from_email = self._get_from_identity("smtp")
+        sender_header = f"{from_name} <{from_email}>" if from_name else from_email
+        msg["From"] = sender_header
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(plain_text, "plain", "utf-8"))
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+        timeout = min(getattr(settings, "SMTP_TIMEOUT_SECONDS", 10), 8)
         try:
-            timeout = settings.SMTP_TIMEOUT_SECONDS
             if settings.SMTP_USE_SSL:
                 server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=timeout)
             else:
@@ -261,11 +514,102 @@ https://cyberscope.io
                 "message": f"Verification email dispatched to {to_email}."
             }
         except Exception as exc:
-            logger.error(f"[EmailDispatcher:SMTP] Failed to send email to {to_email}: {exc}")
+            err_text = str(exc)
+            logger.error(f"[EmailDispatcher:SMTP] Failed to send email to {to_email}: {err_text}")
+            is_blocked = any(k in err_text.lower() for k in ["timed out", "connection refused", "errno 110", "errno 111", "network is unreachable"])
+            if is_blocked:
+                msg_out = (
+                    f"SMTP connection to {settings.SMTP_HOST}:{settings.SMTP_PORT} failed ({err_text}). "
+                    "Render free web services block outbound SMTP ports 25, 465, and 587. "
+                    "Please set RESEND_API_KEY or BREVO_API_KEY in Render environment variables to send emails over HTTPS (port 443)."
+                )
+            else:
+                msg_out = f"SMTP dispatch failed: {err_text}"
             return {
                 "success": False,
                 "provider": "smtp",
-                "message": f"SMTP dispatch failed: {str(exc)}"
+                "message": msg_out
+            }
+
+    def send_verification_email(self, to_email: str, recipient_name: str, code: str) -> Dict[str, Any]:
+        """
+        Constructs and dispatches a verification email.
+        Supports HTTPS Email APIs (Resend, Brevo, SendGrid, Mailgun, Webhook) over port 443
+        as well as enterprise SMTP, with fallback to an in-memory test outbox.
+        """
+        to_email = to_email.strip().lower()
+        subject = f"CyberScope Verification Code: {code}"
+        plain_text = self._build_plain_text(recipient_name, code)
+        html_content = self._build_html_template(recipient_name, code)
+
+        # Check if automated test mode (unless explicitly forced via _FORCE_LIVE_SMTP or _FORCE_LIVE_EMAIL)
+        is_test = _is_test_mode() and not getattr(settings, "_FORCE_LIVE_SMTP", False) and not getattr(settings, "_FORCE_LIVE_EMAIL", False)
+        if is_test:
+            record = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "to_email": to_email,
+                "recipient_name": recipient_name,
+                "code": code,
+                "subject": subject,
+                "plain_text": plain_text,
+                "html_content": html_content
+            }
+            self.dispatched_emails.append(record)
+            logger.info(f"[EmailDispatcher:mock] Verification email recorded in test outbox for {to_email}")
+            return {
+                "success": True,
+                "provider": "mock",
+                "message": f"Verification email recorded in test outbox for {to_email}."
+            }
+
+        provider = self._detect_provider()
+
+        # Log clearly to stdout so Render logs always provide the verification code
+        logger.info("=" * 64)
+        logger.info(f"[CYBERSCOPE AUTH VERIFICATION] Recipient: {to_email} | PIN: {code} | Provider: {provider}")
+        logger.info("=" * 64)
+
+        if provider == "resend":
+            return self._dispatch_resend(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "brevo":
+            return self._dispatch_brevo(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "sendgrid":
+            return self._dispatch_sendgrid(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "mailgun":
+            return self._dispatch_mailgun(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "webhook":
+            return self._dispatch_webhook(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "smtp":
+            return self._dispatch_smtp(to_email, recipient_name, subject, html_content, plain_text, code)
+        elif provider == "mock":
+            record = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "to_email": to_email,
+                "recipient_name": recipient_name,
+                "code": code,
+                "subject": subject,
+                "plain_text": plain_text,
+                "html_content": html_content
+            }
+            self.dispatched_emails.append(record)
+            return {
+                "success": True,
+                "provider": "mock",
+                "message": f"Verification email recorded in mock outbox for {to_email}."
+            }
+        else:
+            logger.warning(
+                f"[EmailDispatcher:unconfigured] No email provider configured for {to_email}. "
+                "Render free tier blocks outbound SMTP ports 25, 465, and 587. "
+                "Set RESEND_API_KEY or BREVO_API_KEY in Render environment variables to send over HTTPS (port 443)."
+            )
+            return {
+                "success": False,
+                "provider": "unconfigured",
+                "message": (
+                    "Email provider not configured. Render free tier blocks outbound SMTP ports 25, 465, and 587. "
+                    "Please set RESEND_API_KEY or BREVO_API_KEY in Render environment variables to send over HTTPS (port 443)."
+                )
             }
 
 

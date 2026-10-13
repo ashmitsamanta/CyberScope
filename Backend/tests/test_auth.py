@@ -252,3 +252,144 @@ def test_all_data_routes_require_auth():
             # 5. Demo token -> 401
             res_demo = req_func(path, headers={"Authorization": f"Bearer {demo_token}"})
             assert res_demo.status_code == 401, f"Route {method} {path} returned {res_demo.status_code} with demo token, expected 401"
+
+
+def test_email_dispatcher_resend_mocked(monkeypatch):
+    """Verifies HTTPS Resend API dispatch on port 443 with mocked httpx response."""
+    from unittest.mock import MagicMock
+    from app.services.notification_service import EmailDispatcher
+
+    dispatcher = EmailDispatcher()
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_test_key_123")
+    monkeypatch.setattr(settings, "EMAIL_FROM_EMAIL", "security@cyberscope.io")
+    monkeypatch.setattr(settings, "EMAIL_FROM_NAME", "CyberScope Security")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"id": "res_msg_abc123"}
+
+    mock_client = MagicMock()
+    mock_client.__enter__.return_value = mock_client
+    mock_client.post.return_value = mock_resp
+
+    import httpx
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: mock_client)
+
+    result = dispatcher._dispatch_resend(
+        to_email="investigator@agency.gov",
+        recipient_name="Agent Smith",
+        subject="CyberScope Verification",
+        html_content="<p>123456</p>",
+        plain_text="123456",
+        code="123456"
+    )
+
+    assert result["success"] is True
+    assert result["provider"] == "resend"
+    assert "Verification email dispatched via Resend" in result["message"]
+    assert mock_client.post.called
+    call_args = mock_client.post.call_args
+    assert call_args[0][0] == "https://api.resend.com/emails"
+    assert call_args[1]["headers"]["Authorization"] == "Bearer re_test_key_123"
+
+
+def test_email_dispatcher_brevo_mocked(monkeypatch):
+    """Verifies HTTPS Brevo API dispatch on port 443 with mocked httpx response."""
+    from unittest.mock import MagicMock
+    from app.services.notification_service import EmailDispatcher
+
+    dispatcher = EmailDispatcher()
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "xkeysib-test-key-456")
+    monkeypatch.setattr(settings, "EMAIL_FROM_EMAIL", "cyberscope60@gmail.com")
+    monkeypatch.setattr(settings, "EMAIL_FROM_NAME", "CyberScope Security")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 201
+    mock_resp.json.return_value = {"messageId": "<20261013.123@smtp-relay.brevo.com>"}
+
+    mock_client = MagicMock()
+    mock_client.__enter__.return_value = mock_client
+    mock_client.post.return_value = mock_resp
+
+    import httpx
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: mock_client)
+
+    result = dispatcher._dispatch_brevo(
+        to_email="officer@police.gov.in",
+        recipient_name="Officer Rao",
+        subject="CyberScope Verification Code",
+        html_content="<p>654321</p>",
+        plain_text="654321",
+        code="654321"
+    )
+
+    assert result["success"] is True
+    assert result["provider"] == "brevo"
+    assert "Verification email dispatched via Brevo" in result["message"]
+    assert mock_client.post.called
+    call_args = mock_client.post.call_args
+    assert call_args[0][0] == "https://api.brevo.com/v3/smtp/email"
+    assert call_args[1]["headers"]["api-key"] == "xkeysib-test-key-456"
+    assert call_args[1]["json"]["sender"]["email"] == "cyberscope60@gmail.com"
+
+
+def test_email_dispatcher_blocked_smtp_diagnosis(monkeypatch):
+    """Verifies that an outbound SMTP timeout on Render triggers an actionable diagnostic message."""
+    from app.services.notification_service import EmailDispatcher
+    import smtplib
+
+    dispatcher = EmailDispatcher()
+    monkeypatch.setattr(settings, "SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setattr(settings, "SMTP_PORT", 587)
+    monkeypatch.setattr(settings, "SMTP_USER", "test@gmail.com")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "apppassword")
+
+    def mock_smtp_connect(*args, **kwargs):
+        raise TimeoutError("[Errno 110] Connection timed out")
+
+    monkeypatch.setattr(smtplib, "SMTP", mock_smtp_connect)
+
+    result = dispatcher._dispatch_smtp(
+        to_email="test@example.com",
+        recipient_name="Test",
+        subject="Test Code",
+        html_content="<p>999999</p>",
+        plain_text="999999",
+        code="999999"
+    )
+
+    assert result["success"] is False
+    assert result["provider"] == "smtp"
+    assert "Render free web services block outbound SMTP ports 25, 465, and 587" in result["message"]
+    assert "RESEND_API_KEY or BREVO_API_KEY" in result["message"]
+
+
+def test_email_dispatcher_provider_detection(monkeypatch):
+    """Verifies provider detection hierarchy."""
+    from app.services.notification_service import EmailDispatcher
+
+    dispatcher = EmailDispatcher()
+
+    # Default with no keys -> unconfigured
+    monkeypatch.setattr(settings, "EMAIL_PROVIDER", "auto")
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "")
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "")
+    monkeypatch.setattr(settings, "SENDGRID_API_KEY", "")
+    monkeypatch.setattr(settings, "MAILGUN_API_KEY", "")
+    monkeypatch.setattr(settings, "EMAIL_WEBHOOK_URL", "")
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    assert dispatcher._detect_provider() == "unconfigured"
+
+    # RESEND_API_KEY set -> resend
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "re_123")
+    assert dispatcher._detect_provider() == "resend"
+
+    # BREVO_API_KEY set without resend -> brevo
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "")
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "xkeysib_123")
+    assert dispatcher._detect_provider() == "brevo"
+
+    # Explicit override takes precedence
+    monkeypatch.setattr(settings, "EMAIL_PROVIDER", "smtp")
+    assert dispatcher._detect_provider() == "smtp"
+
