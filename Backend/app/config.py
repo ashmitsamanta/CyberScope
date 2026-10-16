@@ -77,7 +77,24 @@ class Settings(BaseSettings):
         if not self.JWT_SECRET or len(self.JWT_SECRET) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters long")
 
-    # Email / SMTP Configuration
+    # Email Configuration
+    # EMAIL_PROVIDER options: "auto", "resend", "brevo", "sendgrid", "mailgun", "webhook", "smtp", "mock"
+    EMAIL_PROVIDER: str = "auto"
+    EMAIL_FROM_EMAIL: str = ""
+    EMAIL_FROM_NAME: str = "CyberScope Security"
+
+    # HTTPS Email APIs (Port 443 - Required for Render / Vercel cloud environments)
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
+    BREVO_API_KEY: str = ""
+    SENDINBLUE_API_KEY: str = ""
+    SENDGRID_API_KEY: str = ""
+    MAILGUN_API_KEY: str = ""
+    MAILGUN_DOMAIN: str = ""
+    EMAIL_WEBHOOK_URL: str = ""
+    EMAIL_HTTP_TIMEOUT_SECONDS: float = 10.0
+
+    # Legacy SMTP Configuration (Note: Render free tier blocks outbound SMTP ports 25, 465, 587)
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
