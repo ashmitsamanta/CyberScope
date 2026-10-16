@@ -1395,24 +1395,41 @@ function updateDeliveryUI(delivery, email) {
 
   const emailDelivery = delivery && delivery.email;
   const emailSuccess = emailDelivery && emailDelivery.success === true;
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const genericMsg = 'We could not send the verification email right now. Please wait a minute and use Resend code.';
 
   if (emailSuccess) {
     if (emailMsg) emailMsg.textContent = (emailDelivery && emailDelivery.message) || 'Verification code dispatched to your inbox. Please check your spam folder if not received in 1 minute.';
     if (emailDot) emailDot.className = 'pulse-dot green';
   } else {
-    const reason = (emailDelivery && emailDelivery.message) || 'Email delivery unconfigured. Please configure SMTP credentials in .env.';
+    let reason = (emailDelivery && emailDelivery.message);
+    if (!isLocal) {
+      reason = reason || genericMsg;
+    } else {
+      reason = reason || 'Email delivery unconfigured. Please configure SMTP credentials in .env.';
+    }
     if (emailMsg) emailMsg.textContent = reason;
     if (emailDot) emailDot.className = 'pulse-dot amber';
   }
 
   if (advisory) {
     if (!emailSuccess) {
+      const titleEl = advisory.querySelector('.advisory-content strong');
+      const textEl = advisory.querySelector('.advisory-content span');
+      if (isLocal) {
+        if (titleEl) titleEl.textContent = 'Delivery Configuration Notice:';
+        if (textEl) textEl.textContent = 'Live SMTP email delivery is unconfigured or encountered a delivery error. To ensure verification codes reach your actual inbox, please configure valid SMTP_USER and SMTP_PASSWORD credentials in .env.';
+      } else {
+        if (titleEl) titleEl.textContent = 'Notice:';
+        if (textEl) textEl.textContent = genericMsg;
+      }
       advisory.classList.remove('hidden');
     } else {
       advisory.classList.add('hidden');
     }
   }
 }
+
 
 // Live Duplicate Email Detection (Debounced 400ms + Blur)
 const emailInput = document.getElementById('email');

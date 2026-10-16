@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.config import settings
+from app.limiter import limiter, get_user_id_key
 
 logger = logging.getLogger("cyberscope.chat")
 
@@ -375,6 +376,7 @@ async def stream_nim_generator(
 @router.post("/chat")
 @router.post("/chat/completions")
 @router.post("/test")
+@limiter.limit("20/minute", key_func=get_user_id_key)
 async def chat_endpoint(request: Request):
     """
     CyberScope AI Chat Endpoint.

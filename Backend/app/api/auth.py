@@ -3,13 +3,14 @@ import hmac
 import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
+from app.limiter import limiter, email_rate_limiter, daily_email_tracker
 from app.models.user import User, UserVerification
 from app.services.auth_service import (
     auth_service,
@@ -21,6 +22,8 @@ from app.services.auth_service import (
 from app.services.notification_service import notification_service
 from app.utils.normalization import normalize_phone
 from app.utils.password_strength import (
+    PASSWORD_MIN_LENGTH,
+    PASSWORD_MAX_LENGTH,
     check_password_strength,
     rate_strength,
 )
@@ -51,12 +54,27 @@ class CheckEmailRequest(BaseModel):
 
 
 class RegisterInitiateRequest(BaseModel):
-    name: str = Field(..., min_length=1, description="Full name")
+    name: str = Field(..., min_length=2, max_length=80, description="Full name")
     email: str = Field(..., description="Email address")
     phone: str = Field(..., description="Phone number")
-    password: str = Field(..., min_length=1, description="Password (at least 6 characters)")
+    password: str = Field(..., description="Password")
     role: Optional[str] = Field("Investigator", description="Role (e.g., Investigator, Analyst)")
     organization: Optional[str] = Field("", description="Agency or organization name")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if v is None:
+            raise ValueError("Full name is required.")
+        v_clean = v.strip()
+        if len(v_clean) < 2 or len(v_clean) > 80:
+            raise ValueError("Full name must be between 2 and 80 characters.")
+        disallowed = {'<', '>', '"', '`'}
+        if any(ch in disallowed for ch in v_clean):
+            raise ValueError("Full name cannot contain HTML or script characters (<, >, \", `).")
+        if any(ord(ch) < 32 or ord(ch) == 127 for ch in v_clean):
+            raise ValueError("Full name cannot contain control characters.")
+        return v_clean
 
 
 class RegisterVerifyRequest(BaseModel):
@@ -107,7 +125,8 @@ def check_password(payload: CheckPasswordRequest):
 
 
 @router.post("/check-email")
-def check_email(payload: CheckEmailRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def check_email(request: Request, payload: CheckEmailRequest, db: Session = Depends(get_db)):
     """
     Checks if a user with this email already exists in the users table.
     """
@@ -127,7 +146,8 @@ def check_email(payload: CheckEmailRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register/initiate")
-def register_initiate(payload: RegisterInitiateRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/hour")
+def register_initiate(request: Request, payload: RegisterInitiateRequest, db: Session = Depends(get_db)):
     """
     Validates registration input, checks email uniqueness,
     generates 6-digit email OTP, stores pending verification,
@@ -148,10 +168,16 @@ def register_initiate(payload: RegisterInitiateRequest, db: Session = Depends(ge
             content={"detail": "Invalid phone number format. Must contain at least 10 digits.", "code": "INVALID_PHONE"}
         )
 
-    if len(payload.password) < 6:
+    if len(payload.password) < PASSWORD_MIN_LENGTH:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": "Password must be at least 6 characters long.", "code": "PASSWORD_TOO_SHORT"}
+            content={"detail": f"Password must be at least {PASSWORD_MIN_LENGTH} characters long.", "code": "PASSWORD_TOO_SHORT"}
+        )
+
+    if len(payload.password) > PASSWORD_MAX_LENGTH:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": f"Password must not exceed {PASSWORD_MAX_LENGTH} characters.", "code": "PASSWORD_TOO_LONG"}
         )
 
     if not payload.name.strip():
@@ -171,7 +197,7 @@ def register_initiate(payload: RegisterInitiateRequest, db: Session = Depends(ge
         )
 
     pw_score, pw_max, pw_grade, pw_rating, pw_reasons = check_password_strength(payload.password)
-    if pw_rating == "TOO WEAK":
+    if pw_rating in ("TOO WEAK", "WEAK"):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -186,6 +212,27 @@ def register_initiate(payload: RegisterInitiateRequest, db: Session = Depends(ge
                 }
             }
         )
+
+    # Abuse prevention caps: global daily cap and per-target-email sliding window
+    # Security limitation: Limits are in-memory (single instance) and a client who calls
+    # the Render URL directly can spoof X-Forwarded-For, which is why the per-email and global caps exist.
+    if daily_email_tracker.is_exceeded(settings.EMAIL_DAILY_CAP):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Daily email dispatch limit reached.", "code": "EMAIL_CAP"}
+        )
+
+    allowed, retry_after = email_rate_limiter.check_and_record(normalized_email)
+    if not allowed:
+        resp = JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "detail": f"Too many verification requests for {normalized_email}. Please wait before requesting another.",
+                "code": "RATE_LIMITED"
+            }
+        )
+        resp.headers["Retry-After"] = str(retry_after)
+        return resp
 
     db.query(UserVerification).filter(UserVerification.email == normalized_email).delete()
 
@@ -215,6 +262,7 @@ def register_initiate(payload: RegisterInitiateRequest, db: Session = Depends(ge
         otp_code=email_otp,
         user_name=payload.name.strip()
     )
+    daily_email_tracker.record_send()
 
     return {
         "status": "initiated",
@@ -312,11 +360,21 @@ def register_verify(payload: RegisterVerifyRequest, db: Session = Depends(get_db
 
 
 @router.post("/register/resend")
-def register_resend(payload: ResendOTPRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/hour")
+def register_resend(request: Request, payload: ResendOTPRequest, db: Session = Depends(get_db)):
     """
     Resends verification code if pending registration exists and 30s cooldown passed.
     """
     normalized_email = payload.email.strip().lower()
+
+    # Abuse prevention caps: global daily cap and per-target-email sliding window
+    # Security limitation: Limits are in-memory (single instance) and a client who calls
+    # the Render URL directly can spoof X-Forwarded-For, which is why the per-email and global caps exist.
+    if daily_email_tracker.is_exceeded(settings.EMAIL_DAILY_CAP):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Daily email dispatch limit reached.", "code": "EMAIL_CAP"}
+        )
 
     import time
     last_time = _last_resend_timestamps.get(normalized_email, 0)
@@ -332,6 +390,18 @@ def register_resend(payload: ResendOTPRequest, db: Session = Depends(get_db)):
             }
         )
 
+    allowed, retry_after = email_rate_limiter.check_and_record(normalized_email)
+    if not allowed:
+        resp = JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "detail": f"Too many verification requests for {normalized_email}. Please wait before requesting another.",
+                "code": "RATE_LIMITED"
+            }
+        )
+        resp.headers["Retry-After"] = str(retry_after)
+        return resp
+
     verification = db.query(UserVerification).filter(UserVerification.email == normalized_email).first()
 
     if not verification:
@@ -346,7 +416,7 @@ def register_resend(payload: ResendOTPRequest, db: Session = Depends(get_db)):
     new_email_otp = f"{secrets.randbelow(900000) + 100000:06d}"
     verification.email_otp = new_email_otp
     verification.expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    verification.attempts = 0
+    # Note: Do NOT reset verification.attempts on resend to prevent brute-force abuse
     db.commit()
 
     _last_resend_timestamps[normalized_email] = time.time()
@@ -356,6 +426,7 @@ def register_resend(payload: ResendOTPRequest, db: Session = Depends(get_db)):
         otp_code=new_email_otp,
         user_name=verification.name
     )
+    daily_email_tracker.record_send()
 
     return {
         "status": "resent",
@@ -368,7 +439,8 @@ def register_resend(payload: ResendOTPRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     """
     Authenticates an investigator via email and password.
     Returns identical 401 response for non-existent email and wrong password.

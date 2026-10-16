@@ -51,7 +51,7 @@ def populate_sqlite_db(db_path: str):
         # Verify IP 198.51.100.10 specifically
         p_node = db.query(ThreatNode).filter(ThreatNode.ip == "198.51.100.10").first()
         if p_node:
-            print(f" -> Verified Preexisting IP 198.51.100.10: {p_node.city}, {p_node.state} (PIN: {p_node.pincode})")
+            print(f" -> Verified Preexisting IP 198.51.100.10: {p_node.city}, {p_node.state} (Pincode: {p_node.pincode})")
 
         print(f" -> Successfully populated {db_path} | Threat Nodes: {total_threats} | Entities: {total_entities} | Relationships: {total_relationships} | Tx Linked to IPs: {total_tx_with_ip}")
     except Exception as e:

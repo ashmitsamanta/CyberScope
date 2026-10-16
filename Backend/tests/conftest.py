@@ -1,9 +1,14 @@
 import pytest
 import os
 import sys
+import secrets
 
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Ensure JWT_SECRET is set to a 48-char random value for the test suite
+TEST_JWT_SECRET = secrets.token_urlsafe(48)
+os.environ["JWT_SECRET"] = TEST_JWT_SECRET
 
 from app.database import engine, Base, SessionLocal
 from app.models.case import Case
@@ -72,3 +77,17 @@ def auth_headers():
         return {"Authorization": f"Bearer {token}"}
     finally:
         db.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiters():
+    """Reset slowapi and in-memory rate limiters before and after each test."""
+    from app.limiter import limiter, email_rate_limiter, daily_email_tracker
+    limiter.reset()
+    email_rate_limiter.reset_for_tests()
+    daily_email_tracker.reset_for_tests()
+    yield
+    limiter.reset()
+    email_rate_limiter.reset_for_tests()
+    daily_email_tracker.reset_for_tests()
+

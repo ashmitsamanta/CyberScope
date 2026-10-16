@@ -177,7 +177,9 @@ class SupabaseAuthService:
                 detail="Authentication required. Please provide a valid Bearer token.",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        return self.verify_token(token, db=db)
+        user_info = self.verify_token(token, db=db)
+        request.state.user = user_info
+        return user_info
 
 
 auth_service = SupabaseAuthService()

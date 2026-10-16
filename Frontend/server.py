@@ -550,7 +550,7 @@ def create_auth_token(user_dict: dict, expires_delta_days: int = 7) -> str:
         "exp": int(expire.timestamp()),
         "iat": int(now.timestamp()),
     }
-    secret = os.environ.get("JWT_SECRET") or os.environ.get("SUPABASE_JWT_SECRET") or "cyberscope-secret-jwt-key-for-auth-token-verification-32b"
+    secret = os.environ.get("JWT_SECRET") or os.environ.get("SUPABASE_JWT_SECRET") or ""
     if jwt is not None:
         try:
             return jwt.encode(payload, secret, algorithm="HS256")
@@ -582,7 +582,9 @@ def format_user_claims(payload: Dict[str, Any]) -> Dict[str, Any]:
 def verify_auth_token(token: str) -> Optional[Dict[str, Any]]:
     if not token:
         return None
-    secret = os.environ.get("JWT_SECRET") or os.environ.get("SUPABASE_JWT_SECRET") or "cyberscope-secret-jwt-key-for-auth-token-verification-32b"
+    secret = os.environ.get("JWT_SECRET") or os.environ.get("SUPABASE_JWT_SECRET") or ""
+    if not secret:
+        return None
     if jwt is not None:
         try:
             payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})

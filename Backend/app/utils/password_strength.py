@@ -8,6 +8,8 @@ and rejects known-common passwords outright.
 
 from string import punctuation
 
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 128
 
 COMMON_PASSWORDS = {
     "password", "password1", "password1234", "123456", "12345678",
@@ -24,7 +26,7 @@ def check_password_strength(password: str) -> tuple:
     * score     – integer 0..max_score (0-10 scale)
     * max_score – integer (10)
     * grade     – string ("A+", "A", "B+", "B", "C", "D", "F")
-    * rating    – string ("STRONG", "MEDIUM", "TOO WEAK")
+    * rating    – string ("STRONG", "MEDIUM", "WEAK", "TOO WEAK")
     * reasons   – list of human-readable improvement tips
     """
     reasons: list[str] = []
@@ -33,6 +35,14 @@ def check_password_strength(password: str) -> tuple:
 
     if not password:
         return 0, max_score, "F", "TOO WEAK", ["Password cannot be empty."]
+
+    if len(password) < PASSWORD_MIN_LENGTH:
+        reasons.append(f"Password must be at least {PASSWORD_MIN_LENGTH} characters long.")
+        return 0, max_score, "F", "TOO WEAK", reasons
+
+    if len(password) > PASSWORD_MAX_LENGTH:
+        reasons.append(f"Password must not exceed {PASSWORD_MAX_LENGTH} characters.")
+        return 0, max_score, "F", "TOO WEAK", reasons
 
     # Known-common password -> instant fail (0/10)
     if password.lower() in COMMON_PASSWORDS:
@@ -136,12 +146,15 @@ def get_password_grade(score: int, max_score: int = 10) -> str:
 
 
 def rate_strength(score: int, max_score: int = 10) -> str:
-    """Convert numeric score to human-readable rating (STRONG, MEDIUM, TOO WEAK)."""
+    """Convert numeric score to human-readable rating (STRONG, MEDIUM, WEAK, TOO WEAK)."""
     ratio = score / max_score
     if ratio >= 0.7:
         return "STRONG"
-    elif ratio >= 0.4:
+    elif ratio >= 0.5:
         return "MEDIUM"
+    elif ratio >= 0.3:
+        return "WEAK"
     else:
         return "TOO WEAK"
+
 

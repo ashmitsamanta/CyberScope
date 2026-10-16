@@ -68,20 +68,26 @@ class Settings(BaseSettings):
     # Supabase Authentication & Project Settings
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
-    SUPABASE_SERVICE_ROLE_KEY: str = ""
-    SUPABASE_JWT_SECRET: str = ""
-    JWT_SECRET: str = "cyberscope-secret-jwt-key-for-auth-token-verification-32b"
+    JWT_SECRET: str = ""
 
     def __init__(self, **values):
         super().__init__(**values)
         if not self.JWT_SECRET or len(self.JWT_SECRET) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters long")
+        if self.APP_ENV.lower() == "production":
+            if (self.EMAIL_PROVIDER or "").lower() == "mock":
+                raise ValueError("EMAIL_PROVIDER='mock' is not allowed in production")
+            if self.VERIFICATION_MOCK_DISPATCH:
+                raise ValueError("VERIFICATION_MOCK_DISPATCH cannot be True in production")
+            if self.EMAIL_WEBHOOK_URL and not self.EMAIL_WEBHOOK_URL.startswith("https://"):
+                raise ValueError("EMAIL_WEBHOOK_URL must start with https:// in production")
 
     # Email Configuration
     # EMAIL_PROVIDER options: "auto", "resend", "brevo", "sendgrid", "mailgun", "webhook", "smtp", "mock"
     EMAIL_PROVIDER: str = "auto"
     EMAIL_FROM_EMAIL: str = ""
     EMAIL_FROM_NAME: str = "CyberScope Security"
+    EMAIL_DAILY_CAP: int = 300
 
     # HTTPS Email APIs (Port 443 - Required for Render / Vercel cloud environments)
     RESEND_API_KEY: str = ""

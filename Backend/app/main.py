@@ -37,6 +37,14 @@ logger = logging.getLogger("cyberscope")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.APP_ENV.lower() == "production":
+        if (settings.EMAIL_PROVIDER or "").lower() == "mock":
+            raise RuntimeError("EMAIL_PROVIDER='mock' is refused in production mode")
+        if getattr(settings, "VERIFICATION_MOCK_DISPATCH", False):
+            raise RuntimeError("VERIFICATION_MOCK_DISPATCH cannot be True in production mode")
+        if settings.EMAIL_WEBHOOK_URL and not settings.EMAIL_WEBHOOK_URL.startswith("https://"):
+            raise RuntimeError("EMAIL_WEBHOOK_URL must start with https:// in production mode")
+
     logger.info("Initializing CYBERSCOPE database connection...")
     max_retries = 10
     connected = False
@@ -97,6 +105,9 @@ async def lifespan(app: FastAPI):
     logger.info("CYBERSCOPE backend shutting down.")
 
 
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter, rate_limit_exceeded_handler
+
 is_prod = settings.APP_ENV.lower() == "production"
 
 app = FastAPI(
@@ -109,6 +120,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -119,8 +133,11 @@ app.add_middleware(
 )
 
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, RateLimitExceeded):
+        return rate_limit_exceeded_handler(request, exc)
     logger.error(f"Unhandled error on {request.url.path}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,

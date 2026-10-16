@@ -318,10 +318,15 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# 3. Seed Demo Scenario ("Operation Phantom KYC")
+# 3. Configure Environment Variables
+# Copy the example file and generate a 48-character cryptographically secure JWT_SECRET:
+# python -c "import secrets;print(secrets.token_urlsafe(48))"
+cp .env.example .env
+
+# 4. Seed Demo Scenario ("Operation Phantom KYC")
 python scripts/seed_demo.py
 
-# 4. Start FastAPI Backend Server
+# 5. Start FastAPI Backend Server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
